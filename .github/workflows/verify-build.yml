@@ -1,0 +1,77 @@
+name: Verify building of test containers
+
+on:
+  pull_request:
+    branches: [ "develop" ]
+
+env:
+    REGISTRY_ROOT: ghcr.io
+    
+
+jobs:
+  build-only:
+    runs-on: ubuntu-latest
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+
+      - name: Checkout docker config repository
+        uses: actions/checkout@v4
+        with:
+          path: 'device-management-service'
+
+      - name: Checkout dependent rdke/rdk_logger repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/rdk_logger'
+          ref: 'main'
+          path: 'device-management-service/native-platform/rdk_logger'
+          token: ${{ secrets.GH_RO_TKN }}
+
+      - name: Check out the dependent rdke/webconfigframework repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'rdkcentral/WebconfigFramework'
+          ref: 'main'
+          path: 'device-management-service/native-platform/WebconfigFramework'
+          token: ${{ secrets.GH_RO_TKN }}
+
+      - name: Build mock xconf image
+        uses: docker/build-push-action@v4
+        with:
+          platforms: linux/amd64, linux/arm64
+          context: device-management-service/mock-xconf
+          push: true
+          tags: localhost:5000/mockxconf:latest
+          load: false
+
+      - name: Dump self-signed public serts from mock-xconf container
+        run: |
+          docker run --rm localhost:5000/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem >  device-management-service/native-platform/mock-xconf-server-cert.pem
+
+      - name: Build native-platform image
+        uses: docker/build-push-action@v4
+        with:
+          context: device-management-service/native-platform
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            - REVISION=${{ github.ref_name }}
+          push: false
+          tags: native-platform:latest
+          load: false
+
+      - name: Prepare expected directory for mount in docker-compose
+        run: |
+          mkdir -p /tmp/L2_CONTAINER_SHARED_VOLUME
+
+        
