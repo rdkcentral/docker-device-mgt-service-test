@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/rdk_logger'
-          ref: 'main'
+          ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/rdk_logger'
           token: ${{ secrets.GH_RO_TKN }}
 
@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/WebconfigFramework'
-          ref: 'main'
+          ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/WebconfigFramework'
           token: ${{ secrets.GH_RO_TKN }}          
 
