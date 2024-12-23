@@ -28,4 +28,18 @@ git clone https://github.com/rdkcentral/rbus
 cmake -Hrbus -Bbuild/rbus -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
 make -C build/rbus && make -C build/rbus install
 
+WORKDIR=/opt/WORKDIR
+mkdir -p $WORKDIR
+
+# Include WDMP package
+cd $WORKDIR
+git clone https://github.com/xmidt-org/wdmp-c.git
+cd wdmp-c
+sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' src/wdmp-c.h
+cmake -H. -Bbuild -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
+make -C build && make -C build install
+
+
+
+
 #rtrouted -f -l DEBUG

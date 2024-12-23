@@ -17,7 +17,7 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
           libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev
 
-RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
+RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl libjsonrpccpp-dev
 
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
@@ -61,6 +61,19 @@ export LDFLAGS="-L${INSTALL_DIR}/lib" && \
 autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install && cp -r include/* /usr/local/include/
 RUN rm -rf /opt/WebconfigFramework
+
+COPY libSyscallWrapper /opt/libSyscallWrapper
+RUN cd /opt/libSyscallWrapper && export INSTALL_DIR='/usr/local' && \
+autoreconf --install && \
+./configure --prefix=/usr/local && make && make install
+RUN rm -rf /opt/libSyscallWrapper
+
+COPY common_utilities /opt/common_utilities
+RUN cd /opt/common_utilities && export INSTALL_DIR='/usr/local' && \
+export CFLAGS="-Wno-unused-result -Wno-format-truncation -Wno-error=format-security" && \
+autoreconf --install && \
+./configure --prefix=/usr/local && make && make install
+RUN rm -rf /opt/common_utilities
 
 # Mock implementation of RFC provider in target device
 COPY  ./ /opt/containers
