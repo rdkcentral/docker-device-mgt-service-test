@@ -38,7 +38,8 @@ cd wdmp-c
 sed -i '/WDMP_ERR_SESSION_IN_PROGRESS/a\    WDMP_ERR_INTERNAL_ERROR,\n    WDMP_ERR_DEFAULT_VALUE,' src/wdmp-c.h
 cmake -H. -Bbuild -DBUILD_FOR_DESKTOP=ON -DCMAKE_BUILD_TYPE=Debug
 make -C build && make -C build install
-
+cd $WORKDIR 
+rm -rf wdmp-c
 
 
 
