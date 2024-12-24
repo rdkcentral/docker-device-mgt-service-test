@@ -35,7 +35,11 @@ RUN apt-get update && apt-get install -y cmake
 RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && make install
 
 RUN apt-get update && apt-get install -y \
-    liblog4c-dev
+    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev
+
+RUN mkdir -p /opt && cd /opt && git clone git://git.yoctoproject.org/opkg \
+    && cd opkg && autoreconf --install && ./configure && make && make install && \
+    cd .. && rm -rf opkg
 
 COPY ./mock-xconf-server-cert.pem /usr/share/ca-certificates/mock-xconf-server-cert.pem
 RUN chmod 644 /usr/share/ca-certificates/mock-xconf-server-cert.pem
