@@ -35,11 +35,17 @@ RUN apt-get update && apt-get install -y cmake
 RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && make install
 
 RUN apt-get update && apt-get install -y \
-    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev
+    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
 
 RUN mkdir -p /opt && cd /opt && git clone git://git.yoctoproject.org/opkg \
     && cd opkg && autoreconf --install && ./configure && make && make install && \
     cd .. && rm -rf opkg
+
+RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
+    cd trower-base64 && \
+    meson setup build && \
+    ninja -C build && ninja -C build install
+RUN rm -rf /opt/trower-base64
 
 COPY ./mock-xconf-server-cert.pem /usr/share/ca-certificates/mock-xconf-server-cert.pem
 RUN chmod 644 /usr/share/ca-certificates/mock-xconf-server-cert.pem
@@ -87,6 +93,8 @@ export LDFLAGS="-L${INSTALL_DIR}/lib" && \
 autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install
 RUN rm -rf /opt/containers
+
+RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev 
 
 # Trim down the docker image size
 RUN rm -rf /var/lib/apt/lists/*
