@@ -52,39 +52,54 @@ make -C build && make -C build install
 cd $WORKDIR 
 rm -rf wdmp-c
 
-cd $WORKDIR 
-git clone https://github.com/schmidtw/wrp-c.git
-git checkout main
-cd wrp-c
+# Install dependencies of libparodus
+cd $WORKDIR
+git clone https://github.com/nanomsg/nanomsg.git
+cd nanomsg
+mkdir build
+cd build
+cmake ..
+cmake --build .
+cmake --build . --target install
+cd $WORKDIR
+rm -rf nanomsg
+
+git clone https://github.com/xmidt-org/cimplog.git
+cd cimplog
+git checkout 8a5fb3c2f182241d17f5342bea5b7688c28cd1fd
 mkdir build
 cd build
 cmake ..
 make && make install
-mkdir -p /usr/local/include/wrp-c
-cp -r ../src/wrp-c.h /usr/local/include/wrp-c/
-cd $ROOT
+cd $WORKDIR
+rm -rf cimplog
+
+
+cd $WORKDIR 
+git clone https://github.com/xmidt-org/wrp-c.git
+cd wrp-c
+git checkout 9587e8db33dbbfcd9b78ef66cc2eaf16dfb9afcf
+# replace  7a98138f27f27290e680bf8fbf1f8d1b089bf138 with 445880108a1d171f755ff6ac77e03fbebbb23729 in CMakeLists.txt
+# Message pack revision used in libparadous is not buildable with latest gcc versions
+sed -i 's/7a98138f27f27290e680bf8fbf1f8d1b089bf138/445880108a1d171f755ff6ac77e03fbebbb23729/g' CMakeLists.txt
+mkdir build
+cd build
+cmake ..
+make && make install
+cd $WORKDIR
 rm -rf wrp-c
 
 cd $WORKDIR 
 git clone https://github.com/xmidt-org/libparodus.git
 cd libparodus
+# replace  7a98138f27f27290e680bf8fbf1f8d1b089bf138 with 445880108a1d171f755ff6ac77e03fbebbb23729 in CMakeLists.txt
+# Message pack revision used in libparadous is not buildable with latest gcc versions
+sed -i 's/7a98138f27f27290e680bf8fbf1f8d1b089bf138/445880108a1d171f755ff6ac77e03fbebbb23729/g' CMakeLists.txt
 mkdir build
 cd build
 cmake ..
 make && make install
-cp -r ../src/libparodus.h /usr/local/include/
-cp -r ../src/libparodus_log.h /usr/local/include/
 cd $WORKDIR 
 rm -rf libparodus
-
-
-wget https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-3.3.17.tar.xz
-tar -xf procps-ng-3.3.17.tar.xz
-cd procps-3.3.17
-./configure --without-ncurses
-make && make install
-cd $WORKDIR
-rm -rf procps-ng-3.3.17.tar.xz procps-3.3.17
-
 
 #rtrouted -f -l DEBUG

@@ -94,7 +94,9 @@ autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install
 RUN rm -rf /opt/containers
 
-RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev 
+# Packages required for tr69hostif
+RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev \
+    procps libprocps-dev gcc-multilib g++-multilib
 
 # Trim down the docker image size
 RUN rm -rf /var/lib/apt/lists/*
