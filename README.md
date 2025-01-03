@@ -60,8 +60,10 @@ docker exec -it native-platform /bin/bash
 #### Services are available at 
 `https://mockxconf:50051/dataLakeMock` ==> Data upload service
 `https://mockxconf:50050/loguploader/getT2DCMSettings` ==> DCA settings service
+`https://mockxconf:50052/firmwareupdate/getfirmwaredata` ==> Firmware Download xconf service
 
 - Data source for the services is available at `/etc/xconf/xconf-dcm-response.json` directory.
+- Data source for the firmwareupdate services is available at `/etc/xconf/xconf-cdl-response.json` directory.
 
 #### Login to the container using the following command:
 ```
