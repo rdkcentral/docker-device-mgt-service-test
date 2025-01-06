@@ -25,7 +25,7 @@ const url = require('node:url');
 const options = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
-  port: 50050
+  port: 50052
 };
 
 let save_request = false;
@@ -150,6 +150,6 @@ const serverInstance = https.createServer(options, requestHandler);
 serverInstance.listen(
   options.port,
   () => {
-    console.log('XCONF Mock Server running at https://localhost:50050/');
+    console.log('XCONF Mock Server running at https://localhost:50052/');
   }
 );
