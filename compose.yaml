@@ -7,6 +7,7 @@ services:
       - "50050:50050"
       - "50051:50051"
       - "50052:50052"
+      - "50053:50053"
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
 

@@ -38,6 +38,7 @@ RUN mkdir -p /etc/xconf/
 COPY xconf-dcm-response.json /etc/xconf/xconf-dcm-response.json
 COPY xconf-dcm-response1.json /etc/xconf/xconf-dcm-response1.json
 COPY xconf-cdl-response.json /etc/xconf/xconf-cdl-response.json
+COPY xconf-rfc-response.json /etc/xconf/xconf-rfc-response.json
 
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
@@ -51,9 +52,13 @@ COPY getT2DCMSettings.js /usr/local/bin/getT2DCMSettings.js
 COPY getXconfData.js /usr/local/bin/getXconfData.js
 RUN chmod +x /usr/local/bin/getXconfData.js
 
+COPY rfcData.js /usr/local/bin/rfcData.js
+RUN chmod +x /usr/local/bin/rfcData.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
 EXPOSE 50051
 EXPOSE 50052
+EXPOSE 50053
 

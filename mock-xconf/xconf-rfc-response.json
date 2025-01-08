@@ -1,0 +1,15 @@
+{"featureControl":{
+	"configset-id": "090799"
+	"configset-label": "comcast-default"
+	"features": [
+		{
+			"name": "LSA"
+			"effectiveImmediate": "false"
+			"enable": "true"
+			"configData": {
+				"Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Bootstrap.OsClass": "entos-immerse-rdk"
+			}
+		}
+	]
+}
+}
