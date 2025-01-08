@@ -130,6 +130,116 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 
+# Tr69Hostif
+
+# Update and install dependencies
+RUN apt-get update && apt-get install -y \
+    procps \
+    libprocps-dev \
+    pkg-config \
+    libsoup2.4-dev \
+    libjson-c-dev \
+    libyajl-dev \
+    libibus-1.0-dev \
+    libtinyxml2-dev \
+    libdbus-1-dev \
+    gcc-multilib \
+    g++-multilib \
+    libdirectfb-dev \
+    libusb-dev \
+    libudev-dev \
+    libglib2.0-dev \
+    libnanomsg-dev \
+    cmake
+
+# Set environment variables for pkg-config and procps
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+ENV PROCPS_CFLAGS="-I/usr/local/include"
+ENV PROCPS_LIBS="-L/usr/local/lib -lprocps"
+ENV cjson_LIBS="-L/usr/lib/x86_64-linux-gnu -lcjson"
+ENV cjson_CFLAGS="-I/usr/include/cjson"
+ENV RBUS_LIBS="-L/usr/local/lib -lrbus"
+ENV RBUS_ROOT=/usr
+ENV RBUS_INSTALL_DIR=${RBUS_ROOT}/local
+
+# Build libparodus
+COPY tr69hostif_dependency_pkg/libparodus /opt/libparodus
+RUN  mkdir /opt/libparodus/build && \
+    cd /opt/libparodus/build && \
+    export CXXFLAGS="-std=c++17 -Wno-error=class-memaccess" && \
+    cmake .. && \
+    make && \
+    make install
+
+# Build wrp-c
+COPY tr69hostif_dependency_pkg/wrp-c /opt/wrp-c
+RUN mkdir /opt/wrp-c/build && \
+    cd /opt/wrp-c/build && \
+    export CXXFLAGS="-std=c++17 -Wno-error=class-memaccess" && \
+    cmake .. && \
+    make && \
+    make install && \
+    cp /opt/wrp-c/build/_install/lib/libcimplog.so* /usr/local/lib/ && \
+    cp /opt/wrp-c/build/_install/lib/libtrower-base64.so* /usr/local/lib/ && \
+    cp -r /opt/wrp-c/build/_install/include/cimplog /usr/local/include/
+
+# Build safeclib
+COPY tr69hostif_dependency_pkg/safeclib /opt/safeclib
+RUN cd /opt/safeclib && \
+    apt-get update && \
+    apt-get install -y autoconf automake && \
+    autoreconf --install && \
+    ./configure && \
+    make && \
+    make install
+
+# Build wdmp-c
+COPY tr69hostif_dependency_pkg/wdmp-c /opt/wdmp-c
+RUN mkdir /opt/wdmp-c/build && \
+    cd /opt/wdmp-c/build && \
+    cmake .. && \
+    make && \
+    make install
+
+# Build libSyscallWrapper
+COPY tr69hostif_dependency_pkg/libSyscallWrapper /opt/libSyscallWrapper
+RUN cd /opt/libSyscallWrapper && \
+    autoreconf --install && \
+    ./configure && \
+    make && \
+    make install && \
+    cp /opt/libSyscallWrapper/lib/libsecure_wrapper.so* /usr/local/lib/ && \
+    cp /opt/libSyscallWrapper/include/* /usr/local/include/
+
+#Copy safec_lib.h file
+COPY tr69hostif_dependency_pkg/ssa-cpc /opt/ssa-cpc
+RUN cp /opt/ssa-cpc/safec_lib/include/libsafec/safec_lib.h /usr/local/include/safeclib/
+
+# Build iarmbus
+COPY tr69hostif_dependency_pkg/iarmbus /opt/iarmbus
+RUN cd /opt/iarmbus && \
+    autoreconf --install && \
+    ./configure && \
+    make CFLAGS="-I/usr/lib/x86_64-linux-gnu/dbus-1.0/include/ -I/usr/include/dbus-1.0/ -I/usr/include/glib-2.0/ -I/usr/include/directfb/ -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -I/usr/local/include/safeclib/" LDFLAGS="-L/usr/local/lib -lsafec" && \
+    make install && \
+    cp core/include/* /usr/local/include/
+
+# Build rfc
+COPY tr69hostif_dependency_pkg/tr69hostif /opt/tr69hostif
+RUN cp /opt/tr69hostif/src/hostif/include/* /usr/local/include/
+RUN cp /opt/tr69hostif/src/unittest/stubs/wdmp-c.h /usr/local/include/wdmp-c/
+
+COPY tr69hostif_dependency_pkg/generic /opt/rfc
+RUN cd /opt/rfc && \
+    autoreconf --install && \
+    ./configure --enable-tr181set && \
+    make CXXFLAGS="-I/usr/include/cjson/ -I/usr/local/include/wdmp-c/" && \
+    make install
+
+# Copy the rdk-halif-device-settings header files
+COPY tr69hostif_dependency_pkg/rdk-halif-device_settings /opt/rdk-halif-device_settings
+RUN cp /opt/rdk-halif-device_settings/include/* /usr/local/include/
+
 # Set the entry point command
 #CMD ["/bin/bash"]
 
