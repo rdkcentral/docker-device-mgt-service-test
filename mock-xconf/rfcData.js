@@ -17,4 +17,116 @@
  * limitations under the License.
 */
 
+const https = require('node:https');
+const path = require('node:path');
+const fs = require('node:fs');
+const url = require('node:url');
 
+const options = {
+  key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
+  cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
+  port: 50053
+};
+
+let save_request = false;
+let savedrequest_json={};
+
+/**
+ * Function to read JSON file and return the data
+ */
+function readJsonFile(count) {
+  if(count == 0){
+    var filePath = path.join('/etc/xconf', 'xconf-rfc-response.json');
+  }
+  else{
+    var filePath = path.join('/etc/xconf', 'xconf-rfc-response.json');
+  }
+  try {
+    const fileData = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(fileData);
+  } catch (error) {
+    console.error('Error reading or parsing JSON file:', error);
+    return null;
+  }
+} 
+
+/* 
+* Function to handle RFC Data
+*/
+function handleRFCData(req, res, queryObject, file) {
+  let data = '';
+  req.on('data', function(chunk) {
+    data += chunk;
+  });
+  req.on('end', function() {
+    console.log('Data received: ' + data);
+  });
+
+  if (save_request) {
+    savedrequest_json[new Date().toISOString()] = { ...queryObject };
+  }
+  res.writeHead(200, {'Content-Type': 'application/json'});
+  res.end(JSON.stringify(readJsonFile(file)));
+  return;
+}
+
+function handleAdminSet(req, res, queryObject) {
+  if (queryObject.saveRequest === 'true') {
+    save_request = true;
+  } else if (queryObject.saveRequest === 'false') {
+    save_request = false;
+    savedrequest_json={};
+  }
+}
+
+function handleAdminGet(req, res, queryObject) {
+  if (queryObject.returnData === 'true') {
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(savedrequest_json));
+    return;
+  }
+  res.writeHead(200);
+  res.end('Admin Get Unknown Request');
+}
+
+/**
+ * Handles the incoming request and logs the data received
+ * @param {http.IncomingMessage} req - The incoming request object
+ * @param {http.ServerResponse} res - The server response object
+ */
+function requestHandler(req, res) {
+  const queryObject = url.parse(req.url, true).query;
+  console.log('Query Object: ' + JSON.stringify(queryObject));
+  console.log('Request received: ' + req.url);
+  console.log('json'+JSON.stringify(savedrequest_json));
+  if (req.method === 'GET') {
+    if (req.url.startsWith('/featureControl/getSettings')) {
+      return handleRFCData(req, res, queryObject,0); 
+    }
+    else if (req.url.startsWith('/adminSupportSet')) {
+      handleAdminSet(req, res, queryObject);
+    }
+    else if (req.url.startsWith('/adminSupportGet')) {
+      return handleAdminGet(req, res, queryObject);
+    }
+    else if (req.url.startsWith('/featureControl404/getSettings')) {
+      res.writeHead(404);
+      res.end("404 No Content");
+      return;
+    }
+  }
+  else if (req.method === 'POST') {
+    /* Update Settings */
+  }
+  res.writeHead(200);
+  res.end("Server is Up Please check the request....");
+}
+
+/* Mock Server for RFC */
+const serverInstance = https.createServer(options, requestHandler);
+serverInstance.listen(
+  options.port,
+  () => {
+    console.log('RFC XConf Mock Server running at https://localhost:50053/');
+  }
+);
