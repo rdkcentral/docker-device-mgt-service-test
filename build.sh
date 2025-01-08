@@ -40,6 +40,8 @@ git clone https://github.com/rdkcentral/WebconfigFramework.git
 git clone https://github.com/rdkcentral/libSyscallWrapper.git
 git clone https://github.com/rdkcentral/common_utilities.git
 
+chmod +x tr69hostif_dependency_pkg.sh && ./tr69hostif_dependency_pkg.sh
+
 # Dump the contents of /etc/xconf/certs/mock-xconf-server-cert.pem from above container into a file called mock-xconf-server-cert.pem
 docker run --rm ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem > mock-xconf-server-cert.pem
 
@@ -50,6 +52,7 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
+rm -rf native-platform/tr69hostif_dependency_pkg/
 cd -
 
 
