@@ -103,12 +103,25 @@ RUN rm -rf /var/lib/apt/lists/*
 # Emulate the device side settings
 RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
-RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 
-RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "imagename=T2_Container_${REVISION}" >> /version.txt
 
-# Custom exepectation from RDK stack to have a timezone file in the stack
+RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
+RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
+RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
+
+RUN touch /tmp/route_available
+# Sample IP
+RUN echo "IPV4 8.8.4.4" >> /tmp/.GatewayIP_dfltroute
+# Sample DNS
+RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
+RUN echo "comcast" > /opt/partnerid
+# Sample MAC
+RUN echo "01:23:45:67:89:ab" > /tmp/.estb_mac
+
+RUN echo "RFC_CONFIG_SERVER_URL=https://mockxconf:50053/featureControl/getSettings" > /opt/rfc.properties
+
+# Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
 RUN echo 'US/Mountain' > /opt/persistent/timeZoneDST
 
