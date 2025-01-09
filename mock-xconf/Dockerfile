@@ -38,6 +38,7 @@ RUN mkdir -p /etc/xconf/
 COPY xconf-dcm-response.json /etc/xconf/xconf-dcm-response.json
 COPY xconf-dcm-response1.json /etc/xconf/xconf-dcm-response1.json
 COPY xconf-cdl-response.json /etc/xconf/xconf-cdl-response.json
+COPY firmware_test.bin /etc/xconf/firmware_test.bin
 
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
