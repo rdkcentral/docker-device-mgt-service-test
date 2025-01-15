@@ -80,7 +80,7 @@ RUN rm -rf /opt/libSyscallWrapper
 
 COPY common_utilities /opt/common_utilities
 RUN cd /opt/common_utilities && export INSTALL_DIR='/usr/local' && \
-export CFLAGS="-Wno-unused-result -Wno-format-truncation -Wno-error=format-security" && \
+export CFLAGS="-Wno-error=format -Wno-unused-result -Wno-format-truncation -Wno-error=format-security -DRDK_LOGGER" && \
 autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install
 RUN rm -rf /opt/common_utilities
