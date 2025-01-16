@@ -1,1 +1,1 @@
-{"firmwareDownloadProtocol":"http","firmwareFilename":"ABCD_Test_2404_sprint_20241231631sdy_NG-signed.bin","firmwareLocation":"https://abc/Images","firmwareVersion":"ABCD_Test_2404_sprint_20241231631sdy_NG","rebootImmediately":false}
+{"firmwareDownloadProtocol":"http","firmwareFilename":"firmware_test.bin","firmwareLocation":"https://mockxconf:50052/getfirmwarefile/","firmwareVersion":"firmware_test","rebootImmediately":false}

@@ -69,25 +69,21 @@ function handleFirmwareData(req, res, queryObject, file) {
   return;
 }
 
-function handleAdminSet(req, res, queryObject) {
-  if (queryObject.saveRequest === 'true') {
-    save_request = true;
-  } else if (queryObject.saveRequest === 'false') {
-    save_request = false;
-    savedrequest_json={};
-  }
-}
+function handleFirmwareFileDownload(req, res, queryObject, index) {
+  const fileName = req.url.split('/').pop();
+  //const filePath = path.join(__dirname, fileName);
+  const filePath = path.join('/etc/xconf', fileName);
 
-function handleAdminGet(req, res, queryObject) {
-  if (queryObject.returnData === 'true') {
-    res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(savedrequest_json));
-    return;
-  }
-  res.writeHead(200);
-  res.end('Admin Get Unknown Request');
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end(JSON.stringify(err));
+      return;
+    }
+    res.writeHead(200, {'Content-Type': 'application/octet-stream'});
+    res.end(data);
+  });
 }
-
 /**
  * Handles the incoming request and logs the data received
  * @param {http.IncomingMessage} req - The incoming request object
@@ -102,18 +98,12 @@ function requestHandler(req, res) {
 
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
 
-      //return handleT2DCMSettings(req, res, queryObject,0); 
       return handleFirmwareData(req, res, queryObject,0); 
 
     }
-    else if (req.url.startsWith('/adminSupportSet')) {
-
-      handleAdminSet(req, res, queryObject);
-
-    }
-    else if (req.url.startsWith('/adminSupportGet')) {
-
-      return handleAdminGet(req, res, queryObject);
+    else if (req.url.startsWith('/getfirmwarefile')) {
+      
+      return handleFirmwareFileDownload(req, res, queryObject,0); 
 
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
@@ -121,9 +111,6 @@ function requestHandler(req, res) {
       res.end("404 No Content");
       return;
     }
-    //else if (req.url.startsWith('/loguploader1/getT2DCMSettings')){
-    //  return handleT2DCMSettings(req, res, queryObject,1); 
-    //}
 }
 else if (req.method === 'POST') {
   // TO BE IMPLEMENTED

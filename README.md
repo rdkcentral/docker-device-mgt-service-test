@@ -67,6 +67,7 @@ docker exec -it native-platform /bin/bash
 - Data source for the firmwareupdate services is available at `/etc/xconf/xconf-cdl-response.json` directory.
 - Data source for RFC services is available at `/etc/xconf/xconf-rfc-response.json` directory.
 
+
 #### Login to the container using the following command:
 ```
 docker exec -it mockxconf /bin/bash
