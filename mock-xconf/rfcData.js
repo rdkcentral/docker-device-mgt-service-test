@@ -70,25 +70,6 @@ function handleRFCData(req, res, queryObject, file) {
   return;
 }
 
-function handleAdminSet(req, res, queryObject) {
-  if (queryObject.saveRequest === 'true') {
-    save_request = true;
-  } else if (queryObject.saveRequest === 'false') {
-    save_request = false;
-    savedrequest_json={};
-  }
-}
-
-function handleAdminGet(req, res, queryObject) {
-  if (queryObject.returnData === 'true') {
-    res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(savedrequest_json));
-    return;
-  }
-  res.writeHead(200);
-  res.end('Admin Get Unknown Request');
-}
-
 /**
  * Handles the incoming request and logs the data received
  * @param {http.IncomingMessage} req - The incoming request object
