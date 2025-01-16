@@ -104,7 +104,7 @@ RUN rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
 
-RUN echo "imagename=T2_Container_${REVISION}" >> /version.txt
+RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 
 RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
@@ -121,7 +121,8 @@ RUN echo "01:23:45:67:89:ab" > /tmp/.estb_mac
 # Mock RFC URL
 RUN echo "RFC_CONFIG_SERVER_URL=https://mockxconf:50053/featureControl/getSettings" | tee /opt/rfc.properties /etc/rfc.properties > /dev/null
 # Old RFC FWVersion
-RUN echo "imagename=T2_Container_Prev${REVISION}" >> /opt/secure/RFC/.version
+RUN mkdir -p /opt/secure/RFC
+RUN echo "T2_Container_Prev${REVISION}" >> /opt/secure/RFC/.version
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
