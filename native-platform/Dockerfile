@@ -115,14 +115,8 @@ RUN touch /tmp/route_available
 RUN echo "IPV4 8.8.4.4" >> /tmp/.GatewayIP_dfltroute
 # Sample DNS
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
-RUN echo "comcast" > /opt/partnerid
 # Sample MAC
 RUN echo "01:23:45:67:89:ab" > /tmp/.estb_mac
-# Mock RFC URL
-RUN echo "RFC_CONFIG_SERVER_URL=https://mockxconf:50053/featureControl/getSettings" | tee /opt/rfc.properties /etc/rfc.properties > /dev/null
-# Old RFC FWVersion
-RUN mkdir -p /opt/secure/RFC
-RUN echo "T2_Container_Prev${REVISION}" >> /opt/secure/RFC/.version
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
