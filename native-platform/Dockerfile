@@ -17,7 +17,9 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
           libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev
 
-RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl libjsonrpccpp-dev
+RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
+
+RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
@@ -37,7 +39,7 @@ RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && mak
 RUN apt-get update && apt-get install -y \
     liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
 
-RUN mkdir -p /opt && cd /opt && git clone git://git.yoctoproject.org/opkg \
+RUN mkdir -p /opt && cd /opt && git clone -b v0.7.0 https://git.yoctoproject.org/opkg --single-branch \
     && cd opkg && autoreconf --install && ./configure && make && make install && \
     cd .. && rm -rf opkg
 
@@ -98,6 +100,9 @@ RUN rm -rf /opt/containers
 RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev procps libprocps-dev 
 
 # Trim down the docker image size
+RUN apt-get remove -y software-properties-common
+RUN apt-get autoremove -y
+RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
 # Emulate the device side settings
