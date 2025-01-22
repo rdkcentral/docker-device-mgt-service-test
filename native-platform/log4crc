@@ -24,13 +24,17 @@
   
         <rollingpolicy name="myrollingpolicyrfcmgr" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcmgr" />
-	      <category name="RI.Stack.LOG.RDK.RFCMGR" priority="debug" appender="RI_RFCMGRrollingfileappender"/>
+        <category name="RI.Stack.LOG.RDK.RFCMGR" priority="debug" appender="RI_RFCMGRrollingfileappender"/>
 	
-	      <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
+        <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCAPIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcapi" />
-	      <category name="RI.Stack.LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
+        <category name="RI.Stack.LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
 	
-	      <rollingpolicy name="myrollingpolicytr181api" type="sizewin" maxsize="10485760" maxnum="10" />
+        <rollingpolicy name="myrollingpolicytr181api" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_TR181APIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicytr181api" />
         <category name="RI.Stack.LOG.RDK.TR181API" priority="debug" appender="RI_TR181APIrollingfileappender"/>
+
+        <rollingpolicy name="myrollingpolicytr69hostif" type="sizewin" maxsize="10485760" maxnum="10" />
+        <appender name="RI_TR69HOSTIFrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="tr69hostif.log" layout="dated" rollingpolicy="myrollingpolicytr69hostif" />
+        <category name="RI.Stack.LOG.RDK.TR69HOSTIF" priority="debug" appender="RI_TR69HOSTIFrollingfileappender"/>
 </log4c>
