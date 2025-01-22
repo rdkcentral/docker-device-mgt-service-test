@@ -109,14 +109,7 @@ RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
-
-RUN touch /tmp/route_available
-# Sample IP
-RUN echo "IPV4 8.8.4.4" >> /tmp/.GatewayIP_dfltroute
-# Sample DNS
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
-# Sample MAC
-RUN echo "01:23:45:67:89:ab" > /tmp/.estb_mac
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
