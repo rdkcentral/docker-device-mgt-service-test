@@ -19,6 +19,8 @@ RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-d
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
+RUN apt-get update && apt-get install -y libjsonrpccpp-dev
+
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
     python3-pytest python3-pytest-cov software-properties-common
@@ -35,7 +37,17 @@ RUN apt-get update && apt-get install -y cmake
 RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && make install
 
 RUN apt-get update && apt-get install -y \
-    liblog4c-dev
+    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
+
+RUN mkdir -p /opt && cd /opt && git clone -b v0.7.0 https://git.yoctoproject.org/opkg --single-branch \
+    && cd opkg && autoreconf --install && ./configure && make && make install && \
+    cd .. && rm -rf opkg
+
+RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
+    cd trower-base64 && \
+    meson setup build && \
+    ninja -C build && ninja -C build install
+RUN rm -rf /opt/trower-base64
 
 COPY ./mock-xconf-server-cert.pem /usr/share/ca-certificates/mock-xconf-server-cert.pem
 RUN chmod 644 /usr/share/ca-certificates/mock-xconf-server-cert.pem
@@ -62,6 +74,19 @@ autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install && cp -r include/* /usr/local/include/
 RUN rm -rf /opt/WebconfigFramework
 
+COPY libSyscallWrapper /opt/libSyscallWrapper
+RUN cd /opt/libSyscallWrapper && export INSTALL_DIR='/usr/local' && \
+autoreconf --install && \
+./configure --prefix=/usr/local && make && make install
+RUN rm -rf /opt/libSyscallWrapper
+
+COPY common_utilities /opt/common_utilities
+RUN cd /opt/common_utilities && export INSTALL_DIR='/usr/local' && \
+export CFLAGS="-Wno-error=format -Wno-unused-result -Wno-format-truncation -Wno-error=format-security -DRDK_LOGGER" && \
+autoreconf --install && \
+./configure --prefix=/usr/local && make && make install
+RUN rm -rf /opt/common_utilities
+
 # Mock implementation of RFC provider in target device
 COPY  ./ /opt/containers
 RUN cd /opt/containers/mock-rfc-providers && export INSTALL_DIR='/usr/local' && \
@@ -71,7 +96,13 @@ autoreconf --install && \
 ./configure --prefix=/usr/local && make && make install
 RUN rm -rf /opt/containers
 
+# Packages required for tr69hostif
+RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev procps libprocps-dev 
+
 # Trim down the docker image size
+RUN apt-get remove -y software-properties-common
+RUN apt-get autoremove -y
+RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
 # Emulate the device side settings
