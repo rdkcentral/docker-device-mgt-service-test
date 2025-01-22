@@ -1,1 +1,1 @@
-{"featureControl":{"configset-id":"090909","configset-label":"comcast-default","features":[{"name":"LSA","effectiveImmediate":"false","enable":"true","configData":{"Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Bootstrap.OsClass":"comcast"}}]}}
+{"featureControl":{"configset-id":"090909","configset-label":"default","features":[{"name":"LSA","effectiveImmediate":"false","enable":"true","configData":{"Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Bootstrap.OsClass":"default"}}]}}
