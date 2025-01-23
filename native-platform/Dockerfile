@@ -15,7 +15,7 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           libmsgpack-dev libsystemd-dev libssl-dev libcjson-dev python3-pip libsqlite3-dev
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
-          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev
+          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
