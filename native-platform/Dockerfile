@@ -39,6 +39,8 @@ RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && mak
 RUN apt-get update && apt-get install -y \
     liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
 
+RUN git config --global http.sslverify false
+
 RUN mkdir -p /opt && cd /opt && git clone -b v0.7.0 https://git.yoctoproject.org/opkg --single-branch \
     && cd opkg && autoreconf --install && ./configure && make && make install && \
     cd .. && rm -rf opkg
