@@ -15,7 +15,7 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           libmsgpack-dev libsystemd-dev libssl-dev libcjson-dev python3-pip libsqlite3-dev
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
-          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev
+          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
@@ -38,6 +38,8 @@ RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && mak
 
 RUN apt-get update && apt-get install -y \
     liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
+
+RUN git config --global http.sslverify false
 
 RUN mkdir -p /opt && cd /opt && git clone -b v0.7.0 https://git.yoctoproject.org/opkg --single-branch \
     && cd opkg && autoreconf --install && ./configure && make && make install && \
@@ -108,12 +110,15 @@ RUN rm -rf /var/lib/apt/lists/*
 # Emulate the device side settings
 RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
+
+RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
+
 RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
-
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
-RUN echo "imagename=T2_Container_${REVISION}" >> /version.txt
+RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
+RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 
-# Custom exepectation from RDK stack to have a timezone file in the stack
+# Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
 RUN echo 'US/Mountain' > /opt/persistent/timeZoneDST
 
