@@ -91,7 +91,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: device-management-service/mock-xconf
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:${{ github.ref_name }}
