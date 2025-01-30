@@ -77,7 +77,7 @@ jobs:
       - name: Build mock xconf image
         uses: docker/build-push-action@v4
         with:
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
           context: device-management-service/mock-xconf
           push: true
           tags: localhost:5000/mockxconf:latest
