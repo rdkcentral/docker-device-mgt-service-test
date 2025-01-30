@@ -77,7 +77,7 @@ jobs:
       - name: Build mock xconf image
         uses: docker/build-push-action@v4
         with:
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
           context: device-management-service/mock-xconf
           push: true
           tags: localhost:5000/mockxconf:latest
@@ -91,7 +91,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: device-management-service/native-platform
-          platforms: linux/amd64, linux/arm64
+          platforms: linux/amd64
           build-args: |
             - REVISION=${{ github.ref_name }}
           push: false
