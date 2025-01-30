@@ -25,7 +25,7 @@ const url = require('node:url');
 const options = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
-  port: 50052
+  port: 50053
 };
 
 let save_request = false;
@@ -36,11 +36,10 @@ let savedrequest_json={};
  */
 function readJsonFile(count) {
   if(count == 0){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
+    var filePath = path.join('/etc/xconf', 'xconf-rfc-response.json');
   }
   else{
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
-
+    var filePath = path.join('/etc/xconf', 'xconf-rfc-response.json');
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
@@ -49,9 +48,12 @@ function readJsonFile(count) {
     console.error('Error reading or parsing JSON file:', error);
     return null;
   }
-}  
+} 
 
-function handleFirmwareData(req, res, queryObject, file) {
+/* 
+* Function to handle RFC Data
+*/
+function handleRFCData(req, res, queryObject, file) {
   let data = '';
   req.on('data', function(chunk) {
     data += chunk;
@@ -63,27 +65,11 @@ function handleFirmwareData(req, res, queryObject, file) {
   if (save_request) {
     savedrequest_json[new Date().toISOString()] = { ...queryObject };
   }
-
   res.writeHead(200, {'Content-Type': 'application/json'});
   res.end(JSON.stringify(readJsonFile(file)));
   return;
 }
 
-function handleFirmwareFileDownload(req, res, queryObject, index) {
-  const fileName = req.url.split('/').pop();
-  //const filePath = path.join(__dirname, fileName);
-  const filePath = path.join('/etc/xconf', fileName);
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404);
-      res.end(JSON.stringify(err));
-      return;
-    }
-    res.writeHead(200, {'Content-Type': 'application/octet-stream'});
-    res.end(data);
-  });
-}
 /**
  * Handles the incoming request and logs the data received
  * @param {http.IncomingMessage} req - The incoming request object
@@ -95,48 +81,33 @@ function requestHandler(req, res) {
   console.log('Request received: ' + req.url);
   console.log('json'+JSON.stringify(savedrequest_json));
   if (req.method === 'GET') {
-
-    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
-
-      return handleFirmwareData(req, res, queryObject,0); 
-
+    if (req.url.startsWith('/featureControl/getSettings')) {
+      return handleRFCData(req, res, queryObject,0); 
     }
-    else if (req.url.startsWith('/getfirmwarefile')) {
-      
-      return handleFirmwareFileDownload(req, res, queryObject,0); 
-
+    else if (req.url.startsWith('/adminSupportSet')) {
+      handleAdminSet(req, res, queryObject);
     }
-    else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
+    else if (req.url.startsWith('/adminSupportGet')) {
+      return handleAdminGet(req, res, queryObject);
+    }
+    else if (req.url.startsWith('/featureControl404/getSettings')) {
       res.writeHead(404);
       res.end("404 No Content");
       return;
     }
-}
-else if (req.method === 'POST') {
-  // TO BE IMPLEMENTED
-  if (req.url.startsWith('/updateFirmware')) {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      const postData = JSON.parse(body);
-      const redirect_json = { ...postData };
-      redirect_json[new Date().toISOString()] = { ...queryObject };;// Example of adding a timestamped entry
-
-      res.writeHead(200, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify(redirect_json));
-  });
   }
-
-}
+  else if (req.method === 'POST') {
+    /* Update Settings */
+  }
   res.writeHead(200);
   res.end("Server is Up Please check the request....");
 }
+
+/* Mock Server for RFC */
 const serverInstance = https.createServer(options, requestHandler);
 serverInstance.listen(
   options.port,
   () => {
-    console.log('XCONF Mock Server running at https://localhost:50052/');
+    console.log('RFC XConf Mock Server running at https://localhost:50053/');
   }
 );
