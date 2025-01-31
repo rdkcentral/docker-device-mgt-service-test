@@ -32,11 +32,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull docker images
-        run: |
-          docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
-          docker pull ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
-
       - name: Checkout docker config repository
         uses: actions/checkout@v4
         with:
