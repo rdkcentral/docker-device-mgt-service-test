@@ -19,7 +19,32 @@
 ##########################################################################
 
 REGISTRY_ROOT="ghcr.io"
-REPOSITORY_NAME="docker-device-mgt-service-test"
+REPOSITORY_NAME="rdkcentral/docker-device-mgt-service-test"
+
+# Default value for argument
+tr69hostif=false
+
+# Identify/Enable the module via arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --tr69hostif)
+      tr69hostif=true
+      shift
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      exit 1
+      ;;
+  esac
+done
+
+# Conditionally execute the dependency script if the argument is passed
+if [ "$tr69hostif" = true ]; then
+  echo "Executing the dependency script..."
+  git apply native-platform/MockRFC_Provider.patch
+else
+  echo "Skipping the dependency."
+fi
 
 # Build container that provides mock xconf service
 cd mock-xconf
@@ -52,7 +77,7 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
-rm -rf native-platform/tr69hostif_dependency_pkg/
+rm -rf tr69hostif_dependency_pkg/
 cd -
 
 

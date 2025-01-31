@@ -1,0 +1,17 @@
+diff --git a/native-platform/mock-rfc-providers/rfc_provider.c b/native-platform/mock-rfc-providers/rfc_provider.c
+index b105f1b..2953874 100644
+--- a/native-platform/mock-rfc-providers/rfc_provider.c
++++ b/native-platform/mock-rfc-providers/rfc_provider.c
+@@ -185,6 +185,12 @@ int main(int argc, char* argv[])
+     (void)(argc);
+     (void)(argv);
+ 
++    while (1)
++    {
++        // Your code here
++        printf("provider: running ...\n");
++        sleep(1);
++    }
+ 
+     int rc1 = RBUS_ERROR_SUCCESS;
+ 

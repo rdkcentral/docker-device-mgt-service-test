@@ -1,0 +1,78 @@
+diff --git a/hal/include/dsAudio.h b/hal/include/dsAudio.h
+index 3d26fe4..f13e5a3 100644
+--- a/hal/include/dsAudio.h
++++ b/hal/include/dsAudio.h
+@@ -325,7 +325,8 @@ dsError_t  dsSetAudioCompression(int handle, dsAudioCompression_t compression);
+  * @retval dsERR_NONE Indicates the dsSetStereoMode API was successfully called using iarmbus call.
+  * @retval dsERR_GENERAL Indicates error due to general failure.
+  */
+-dsError_t  dsSetStereoMode(int handle, dsAudioStereoMode_t mode);
++extern dsError_t dsSetStereoMode(int handle, dsAudioStereoMode_t mode,bool IsPersist);
++//dsError_t  dsSetStereoMode(int handle, dsAudioStereoMode_t mode);
+ 
+ /**
+  * @brief This function sets the auto mode to be used on the specified audio port.
+diff --git a/rpc/cli/dsAudio.c b/rpc/cli/dsAudio.c
+index dd0e092..824a656 100644
+--- a/rpc/cli/dsAudio.c
++++ b/rpc/cli/dsAudio.c
+@@ -593,7 +593,7 @@ dsError_t dsIsAudioMSDecode(int handle, bool *HasMS11Decode)
+ 
+ dsError_t dsEnableLEConfig(int handle, const bool enable)
+ {
+-	_dsLEConfigParam_t param;
++	dsLEConfigParam_t param;
+ 	IARM_Result_t rpcRet = IARM_RESULT_SUCCESS;
+ 
+ 	param.handle = handle;
+@@ -615,7 +615,7 @@ dsError_t dsEnableLEConfig(int handle, const bool enable)
+ 
+ dsError_t dsEnableMS12Config(int handle, dsMS12FEATURE_t feature,const bool enable)
+ {
+-	_dsMS12ConfigParam_t param;
++	dsMS12ConfigParam_t param;
+ 	IARM_Result_t rpcRet = IARM_RESULT_SUCCESS;
+ 
+ 	param.handle = handle;
+diff --git a/rpc/srv/dsAudio.c b/rpc/srv/dsAudio.c
+index 7d978d5..586293e 100755
+--- a/rpc/srv/dsAudio.c
++++ b/rpc/srv/dsAudio.c
+@@ -114,6 +114,12 @@ void ms12ConfigInit()
+     {
+     	return;
+     }
++
++#ifndef RDK_DSHAL_NAME
++    #warning   "RDK_DSHAL_NAME is not defined"
++    #define RDK_DSHAL_NAME "RDK_DSHAL_NAME is not defined"
++#endif
++
+     dsGetAudioPort(dsAUDIOPORT_TYPE_HDMI,0,&handle);
+     static dsEnableMS12Config_t func = NULL;
+     if (func == NULL) {
+@@ -427,7 +433,7 @@ IARM_Result_t _dsSetStereoMode(void *arg)
+     dsError_t ret = dsERR_NONE;
+     dsAudioSetStereoModeParam_t *param = (dsAudioSetStereoModeParam_t *)arg;
+ 
+-    ret = dsSetStereoMode(param->handle, param->mode);
++    ret = dsSetStereoMode(param->handle, param->mode, 0);
+     param->rpcResult = ret;
+ 
+     if (ret == dsERR_NONE)
+diff --git a/rpc/srv/dsVideoDevice.c b/rpc/srv/dsVideoDevice.c
+index 3b0c209..e886fab 100755
+--- a/rpc/srv/dsVideoDevice.c
++++ b/rpc/srv/dsVideoDevice.c
+@@ -60,6 +60,11 @@ bool enableHDRDVStatus = false;
+ #define IARM_BUS_Lock(lock) pthread_mutex_lock(&dsLock)
+ #define IARM_BUS_Unlock(lock) pthread_mutex_unlock(&dsLock)
+ 
++#ifndef RDK_DSHAL_NAME
++    #warning   "RDK_DSHAL_NAME is not defined"
++    #define RDK_DSHAL_NAME "RDK_DSHAL_NAME is not defined"
++#endif
++
+ IARM_Result_t _dsVideoDeviceInit(void *arg);
+ IARM_Result_t _dsGetVideoDevice(void *arg);
+ IARM_Result_t _dsSetDFC(void *arg);

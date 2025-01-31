@@ -162,27 +162,6 @@ ENV RBUS_LIBS="-L/usr/local/lib -lrbus"
 ENV RBUS_ROOT=/usr
 ENV RBUS_INSTALL_DIR=${RBUS_ROOT}/local
 
-# Build libparodus
-COPY tr69hostif_dependency_pkg/libparodus /opt/libparodus
-RUN  mkdir /opt/libparodus/build && \
-    cd /opt/libparodus/build && \
-    export CXXFLAGS="-std=c++17 -Wno-error=class-memaccess" && \
-    cmake .. && \
-    make && \
-    make install
-
-# Build wrp-c
-COPY tr69hostif_dependency_pkg/wrp-c /opt/wrp-c
-RUN mkdir /opt/wrp-c/build && \
-    cd /opt/wrp-c/build && \
-    export CXXFLAGS="-std=c++17 -Wno-error=class-memaccess" && \
-    cmake .. && \
-    make && \
-    make install && \
-    cp /opt/wrp-c/build/_install/lib/libcimplog.so* /usr/local/lib/ && \
-    cp /opt/wrp-c/build/_install/lib/libtrower-base64.so* /usr/local/lib/ && \
-    cp -r /opt/wrp-c/build/_install/include/cimplog /usr/local/include/
-
 # Build safeclib
 COPY tr69hostif_dependency_pkg/safeclib /opt/safeclib
 RUN cd /opt/safeclib && \
@@ -192,24 +171,6 @@ RUN cd /opt/safeclib && \
     ./configure && \
     make && \
     make install
-
-# Build wdmp-c
-COPY tr69hostif_dependency_pkg/wdmp-c /opt/wdmp-c
-RUN mkdir /opt/wdmp-c/build && \
-    cd /opt/wdmp-c/build && \
-    cmake .. && \
-    make && \
-    make install
-
-# Build libSyscallWrapper
-COPY tr69hostif_dependency_pkg/libSyscallWrapper /opt/libSyscallWrapper
-RUN cd /opt/libSyscallWrapper && \
-    autoreconf --install && \
-    ./configure && \
-    make && \
-    make install && \
-    cp /opt/libSyscallWrapper/lib/libsecure_wrapper.so* /usr/local/lib/ && \
-    cp /opt/libSyscallWrapper/include/* /usr/local/include/
 
 #Copy safec_lib.h file
 COPY tr69hostif_dependency_pkg/ssa-cpc /opt/ssa-cpc
@@ -232,13 +193,27 @@ RUN cp /opt/tr69hostif/src/unittest/stubs/wdmp-c.h /usr/local/include/wdmp-c/
 COPY tr69hostif_dependency_pkg/generic /opt/rfc
 RUN cd /opt/rfc && \
     autoreconf --install && \
-    ./configure --enable-tr181set && \
+    ./configure --enable-tr181set --enable-rfctool && \
     make CXXFLAGS="-I/usr/include/cjson/ -I/usr/local/include/wdmp-c/" && \
     make install
 
 # Copy the rdk-halif-device-settings header files
 COPY tr69hostif_dependency_pkg/rdk-halif-device_settings /opt/rdk-halif-device_settings
 RUN cp /opt/rdk-halif-device_settings/include/* /usr/local/include/
+
+# Build Device Settings
+COPY tr69hostif_dependency_pkg/devicesettings /opt/devicesettings
+RUN cd /opt/devicesettings && \
+    cp ./hal/include/dsVideoDeviceSettings_sample.h ./hal/include/dsVideoDeviceSettings.h && \
+    cp ./hal/include/dsAudioSettings_sample.h ./hal/include/dsAudioSettings.h && \
+    cp ./hal/include/dsVideoPortSettings_sample.h ./hal/include/dsVideoPortSettings.h && \
+    cp ./hal/include/dsVideoResolutionSettings_sample.h ./hal/include/dsVideoResolutionSettings.h && \
+    autoreconf --install && \
+    ./configure && \
+    make CFLAGS="-I../../hal/include/" CXXFLAGS="-I../../hal/include/ -I ../hal/include" && \
+    make install && \
+    cp /opt/devicesettings/hal/include/* /usr/local/include/ && \
+    cp /opt/devicesettings/ds/include/* /usr/local/include/
 
 # Set the entry point command
 #CMD ["/bin/bash"]
