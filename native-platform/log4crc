@@ -29,7 +29,11 @@
         <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCAPIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcapi" />
         <category name="RI.Stack.LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
-	
+
+        <rollingpolicy name="myrollingpolicyremotedebugger" type="sizewin" maxsize="10485760" maxnum="10" />
+        <appender name="RI_REMOTEDEBUGGERrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="remotedebugger.log" layout="dated" rollingpolicy="myrollingpolicyremotedebugger" />
+	<category name="RI.Stack.LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
+
         <rollingpolicy name="myrollingpolicytr181api" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_TR181APIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicytr181api" />
         <category name="RI.Stack.LOG.RDK.TR181API" priority="debug" appender="RI_TR181APIrollingfileappender"/>

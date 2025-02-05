@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 10
+#define NUMBER_OF_DATA_ELEMENTS 14
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -63,7 +63,11 @@ char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
     "false",
     "global",
     "false",
-    "DOCKER"
+    "DOCKER",
+    "true",
+    "",
+    "",
+    "RDK-RRD-Test"
 };
 
 void init_dataElementValues()
@@ -86,7 +90,11 @@ void init_dataElementValues()
     "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MTLS.Enable",
     "Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId",
     "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
-    "Device.DeviceInfo.ModelName"
+    "Device.DeviceInfo.ModelName",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
 };
 
 
