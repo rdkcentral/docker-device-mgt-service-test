@@ -68,6 +68,26 @@ jobs:
             ref: 'IMPORT_INITIAL_develop'
             path: 'device-management-service/native-platform/common_utilities'
             token: ${{ secrets.GH_RO_TKN }}
+      
+      - name: Clone tr69hostif dependencies
+        run: |
+          mkdir -p tr69hostif_dependency_pkg
+          cd tr69hostif_dependency_pkg
+          
+          # Clone repositories
+          git clone git@github.com:rdk-e/iarmbus.git
+          git clone git@github.com:rdk-e/tr69hostif.git
+          git clone https://github.com/rurban/safeclib.git
+          git clone -b 24Q4_sprint ssh://gerrit.teamccp.com:29418/rdk/components/generic/rfc/generic
+          git clone -b stable2 ssh://gerrit.teamccp.com:29418/rdk/components/cpc/ssa-cpc
+          git clone git@github.com:rdkcentral/rdk-halif-device_settings.git
+          git clone -b master https://code.rdkcentral.com/r/rdk/components/generic/devicesettings
+
+      - name: Apply patch to devicesettings repository
+        run: |
+          cd tr69hostif_dependency_pkg/devicesettings
+          cp ../../devicesettings_compilation.patch ./
+          git apply devicesettings_compilation.patch
 
       - name: Build mock xconf image
         uses: docker/build-push-action@v4
