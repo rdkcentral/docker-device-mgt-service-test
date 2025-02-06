@@ -26,7 +26,7 @@
         <appender name="RI_RFCMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcmgr" />
         <category name="RI.Stack.LOG.RDK.RFCMGR" priority="debug" appender="RI_RFCMGRrollingfileappender"/>
 
-        <rollingpolicy name="myrollingpolicyremotedebugger" type="sizewin" maxsize="10485760" maxnum="10" />
+        <rollingpolicy name="myrollingpolicyremotedebugger" type="sizewin" maxsize="50485760" maxnum="10" />
         <appender name="RI_REMOTEDEBUGGERrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="remotedebugger.log" layout="dated" rollingpolicy="myrollingpolicyremotedebugger" />
 	<category name="RI.Stack.LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
 
