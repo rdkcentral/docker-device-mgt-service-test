@@ -270,8 +270,9 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
         printf("dataElementNames[%d] = %s\n", i, dataElementNames[i]);
         if (strcmp(name, dataElementNames[i]) == 0)
         {
-            if ((type == RBUS_STRING) || (type == RBUS_BOOLEAN))
+            if (type == RBUS_STRING)
             {
+                printf("String Value set handler\n");
                 int len = 0;
                 char const* data = NULL;
                 data = rbusValue_GetString(value, &len);
@@ -282,12 +283,23 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
                 strcpy(dataElementValues[i], data);
                 printf("Done setting value");
             }
+            else if (type == RBUS_BOOLEAN)
+            {
+                printf("Boolean Value set handler\n");
+                bool data = rbusValue_GetBoolean(value);
+                printf("Called set handler for [%s] & value is %s\n", name, data ? "true" : "false");
+                // Clear the value in dataElementValues array
+                memset(dataElementValues[i], 0, strlen(dataElementValues[i]));
+                // Copy the new value to the dataElementValues array
+                strcpy(dataElementValues[i], data ? "true" : "false");
+                printf("Done setting value\n");
+            }
             else
             {
                 printf("Cant Handle [%s]\n", name);
                 return RBUS_ERROR_INVALID_INPUT;
             }
-            break;
+            break;            
         }
     }
 
