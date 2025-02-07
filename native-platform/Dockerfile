@@ -8,6 +8,7 @@ ARG REVISION=0.0.0
 RUN apt-get update && apt-get install -y build-essential \
           wget openssl tar vim git git-lfs
 
+RUN apt-get update && apt-get install -y dos2unix
 
 RUN apt-get install -y libtool autotools-dev automake zlib1g-dev ninja-build meson
 
