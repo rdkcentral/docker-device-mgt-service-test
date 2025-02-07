@@ -152,7 +152,7 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
         dataElementNames[9], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
-    }
+    },
     {
         dataElementNames[10], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
@@ -172,7 +172,7 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
         dataElementNames[13], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
-     }
+    }
 };
 
 
@@ -270,7 +270,7 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
         printf("dataElementNames[%d] = %s\n", i, dataElementNames[i]);
         if (strcmp(name, dataElementNames[i]) == 0)
         {
-            if (type == RBUS_STRING) || (type == RBUS_BOOLEAN)
+            if ((type == RBUS_STRING) || (type == RBUS_BOOLEAN))
             {
                 int len = 0;
                 char const* data = NULL;
