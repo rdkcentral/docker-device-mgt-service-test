@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 10
+#define NUMBER_OF_DATA_ELEMENTS 14
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -63,7 +63,11 @@ char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
     "false",
     "global",
     "false",
-    "DOCKER"
+    "DOCKER",
+    "true",
+    "",
+    "",
+    "RDK-RRD-Test"
 };
 
 void init_dataElementValues()
@@ -86,7 +90,11 @@ void init_dataElementValues()
     "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MTLS.Enable",
     "Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId",
     "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
-    "Device.DeviceInfo.ModelName"
+    "Device.DeviceInfo.ModelName",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
 };
 
 
@@ -142,6 +150,26 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
     },
     {
         dataElementNames[9], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[10], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[11], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[12], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[13], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
     }
@@ -244,6 +272,7 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
         {
             if (type == RBUS_STRING)
             {
+                printf("String Value set handler\n");
                 int len = 0;
                 char const* data = NULL;
                 data = rbusValue_GetString(value, &len);
@@ -254,12 +283,23 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
                 strcpy(dataElementValues[i], data);
                 printf("Done setting value");
             }
+            else if (type == RBUS_BOOLEAN)
+            {
+                printf("Boolean Value set handler\n");
+                bool data = rbusValue_GetBoolean(value);
+                printf("Called set handler for [%s] & value is %s\n", name, data ? "true" : "false");
+                // Clear the value in dataElementValues array
+                memset(dataElementValues[i], 0, strlen(dataElementValues[i]));
+                // Copy the new value to the dataElementValues array
+                strcpy(dataElementValues[i], data ? "true" : "false");
+                printf("Done setting value\n");
+            }
             else
             {
                 printf("Cant Handle [%s]\n", name);
                 return RBUS_ERROR_INVALID_INPUT;
             }
-            break;
+            break;            
         }
     }
 
