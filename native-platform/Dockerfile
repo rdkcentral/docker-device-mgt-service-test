@@ -119,6 +119,7 @@ RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
+RUN echo "DEVICE_MAC=AA:BB:CC:DD:EE:FF" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 
 # Custom expectation from RDK stack to have a timezone file in the stack
