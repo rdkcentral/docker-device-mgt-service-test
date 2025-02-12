@@ -111,6 +111,8 @@ RUN rm -rf /var/lib/apt/lists/*
 # Emulate the device side settings
 RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
+RUN mkdir -p /bin
+RUN mkdir -p /lib/rdk
 
 RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 
@@ -125,6 +127,18 @@ RUN echo 'US/Mountain' > /opt/persistent/timeZoneDST
 
 # Create A Shared Volume
 RUN mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME
+
+COPY dcm.properties /etc/dcm.properties
+COPY include.properties /etc/include.properties
+
+COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
+RUN chmod +x /lib/rdk/uploadSTBLogs.sh
+
+COPY utils.sh /lib/rdk/utils.sh
+RUN chmod +x /lib/rdk/utils.sh
+
+COPY timestamp /bin/timestamp
+RUN chmod +x /bin/timestamp
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh

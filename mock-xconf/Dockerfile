@@ -56,10 +56,14 @@ RUN chmod +x /usr/local/bin/getXconfData.js
 COPY rfcData.js /usr/local/bin/rfcData.js
 RUN chmod +x /usr/local/bin/rfcData.js
 
+COPY rrdFileupload.js /usr/local/bin/rrdFileupload.js
+RUN chmod +x /usr/local/bin/rrdFileupload.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
 EXPOSE 50051
 EXPOSE 50052
 EXPOSE 50053
+EXPOSE 50054
 
