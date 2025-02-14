@@ -44,6 +44,7 @@ function readJsonFile(count) {
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
+    console.log('Data received1: ' + fileData);
     return JSON.parse(fileData);
   } catch (error) {
     console.error('Error reading or parsing JSON file:', error);
@@ -57,7 +58,7 @@ function handleFirmwareData(req, res, queryObject, file) {
     data += chunk;
   });
   req.on('end', function() {
-    console.log('Data received: ' + data);
+    console.log('Data received2: ' + data);
   });
 
   if (save_request) {
@@ -66,6 +67,7 @@ function handleFirmwareData(req, res, queryObject, file) {
 
   res.writeHead(200, {'Content-Type': 'application/json'});
   res.end(JSON.stringify(readJsonFile(file)));
+  //console.log('Data received After stringfy: ' + JSON.stringify(readJsonFile(file)));
   return;
 }
 
@@ -94,6 +96,7 @@ function requestHandler(req, res) {
   console.log('Query Object: ' + JSON.stringify(queryObject));
   console.log('Request received: ' + req.url);
   console.log('json'+JSON.stringify(savedrequest_json));
+  console.log('Request method: ' + req.method);
   if (req.method === 'GET') {
 
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
@@ -111,28 +114,16 @@ function requestHandler(req, res) {
       res.end("404 No Content");
       return;
     }
-}
-else if (req.method === 'POST') {
-  // TO BE IMPLEMENTED
-  if (req.url.startsWith('/updateFirmware')) {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      const postData = JSON.parse(body);
-      const redirect_json = { ...postData };
-      redirect_json[new Date().toISOString()] = { ...queryObject };;// Example of adding a timestamped entry
-
-      res.writeHead(200, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify(redirect_json));
-  });
   }
-
-}
+  else if (req.method === 'POST') {
+    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,0); 
+    }
+  }
   res.writeHead(200);
   res.end("Server is Up Please check the request....");
 }
+
 const serverInstance = https.createServer(options, requestHandler);
 serverInstance.listen(
   options.port,
