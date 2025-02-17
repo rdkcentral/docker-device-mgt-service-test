@@ -8,6 +8,7 @@ ARG REVISION=0.0.0
 RUN apt-get update && apt-get install -y build-essential \
           wget openssl tar vim git git-lfs
 
+RUN apt-get update && apt-get install -y dos2unix
 
 RUN apt-get install -y libtool autotools-dev automake zlib1g-dev ninja-build meson
 
@@ -110,12 +111,15 @@ RUN rm -rf /var/lib/apt/lists/*
 # Emulate the device side settings
 RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
+RUN mkdir -p /bin
+RUN mkdir -p /lib/rdk
 
 RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 
 RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
+RUN echo "DEVICE_MAC=AA:BB:CC:DD:EE:FF" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 
 # Custom expectation from RDK stack to have a timezone file in the stack
@@ -124,6 +128,18 @@ RUN echo 'US/Mountain' > /opt/persistent/timeZoneDST
 
 # Create A Shared Volume
 RUN mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME
+
+COPY dcm.properties /etc/dcm.properties
+COPY include.properties /etc/include.properties
+
+COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
+RUN chmod +x /lib/rdk/uploadSTBLogs.sh
+
+COPY utils.sh /lib/rdk/utils.sh
+RUN chmod +x /lib/rdk/utils.sh
+
+COPY timestamp /bin/timestamp
+RUN chmod +x /bin/timestamp
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
