@@ -10,21 +10,26 @@ TriggerType=$7
 RRD_FLAG=$8
 RRD_UPLOADLOG_FILE=$9
 
+uploadLog()
+{
+    echo "`/bin/timestamp`: $0: $*" >> /opt/logs/remotedebugger.log.0
+}
+
 if [ "$RRD_FLAG" -eq 1 ]; then
     RRD_DIR="/tmp/rrd/"
     UploadHttpLink="https://mockxconf:50054/rrdUploadFile"
     ret=`curl -k -F "file=@$RRD_DIR$RRD_UPLOADLOG_FILE" $UploadHttpLink --insecure -w "%{http_code}" -o /dev/null`
     if [ $? -eq 0 ]; then
-        echo "Curl command executed successfully."
+        uploadLog "Curl command executed successfully."
         if [ "$ret" = "200" ];then
-            echo "Uploading Logs through HTTP Success..., HTTP response code: $ret"
+            uploadLog "Uploading Logs through HTTP Success..., HTTP response code: $ret"
             exit 0
         else
-            echo "Uploading Logs through HTTP Failed!!!, HTTP response code: $ret"
+            uploadLog "Uploading Logs through HTTP Failed!!!, HTTP response code: $ret"
             exit 127
         fi
     else
-        echo "Curl command failed with return code $?."
+        uploadLog "Curl command failed with return code $?."
         exit 127
     fi
 fi
