@@ -102,6 +102,10 @@ RUN rm -rf /opt/containers
 # Packages required for tr69hostif
 RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev procps libprocps-dev 
 
+# Install nodejs
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
+RUN apt-get install -q -y nodejs
+
 # Trim down the docker image size
 RUN apt-get remove -y software-properties-common
 RUN apt-get autoremove -y
