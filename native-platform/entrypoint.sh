@@ -24,7 +24,7 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
-# Build and install RFC parameter provider
+# Build and install RFC parameter provider and tr69hostif
 
 rt_pid=`pidof rtrouted`
 if [ ! -z "$rt_routed" ]; then
@@ -34,6 +34,9 @@ fi
 rm -fr /tmp/rtroute*
 rtrouted -l DEBUG 
 
-/usr/local/bin/rfc_provider
+/usr/local/bin/rfc_provider &
+/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -d /etc/debug.ini -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
 
 /bin/bash
+## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
+while true ; do echo "Mocked native-platform heartbeat ..." && sleep 5 ; done
