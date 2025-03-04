@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 
 # Add libsoup-3.0 support
-RUN apt-get update && apt-get install -y libsoup-3.0
+RUN apt-get update && apt-get install -y libsoup-3.0-dev
 
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
