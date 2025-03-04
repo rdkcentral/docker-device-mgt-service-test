@@ -2,6 +2,7 @@ FROM ubuntu:jammy
 ARG DEBIAN_FRONTEND=noninteractive
 # Get the revision number from the build environment
 # This must be a release tag derived from a github relase event context
+# TEST LINE
 ARG REVISION=0.0.0
 
 # Add instructions to install autotools
