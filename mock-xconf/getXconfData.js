@@ -38,9 +38,11 @@ function readJsonFile(count) {
   if(count == 0){
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
   }
+  else if(count == 1){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalid-response.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
-
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
@@ -118,6 +120,14 @@ function requestHandler(req, res) {
   else if (req.method === 'POST') {
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,0); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,1); 
+    }
+    else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
+      res.writeHead(404);
+      res.end("404 No Content");
+      return;
     }
   }
   res.writeHead(200);
