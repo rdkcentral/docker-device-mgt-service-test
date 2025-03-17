@@ -50,6 +50,12 @@ function readJsonFile(count) {
   else if(count == 4){
     var filePath = path.join('/etc/xconf', 'xconf-cdl-reboottrue-response.json');
   }
+  else if(count == 5){
+    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-response.json');
+  }
+  else if(count == 6){
+    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-404response.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
   }
@@ -136,6 +142,12 @@ function requestHandler(req, res) {
     }
     else if (req.url.startsWith('/firmwareupdate/getreboottruefirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,4); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getperipheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,5); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/get404peripheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,6); 
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
       res.writeHead(404);
