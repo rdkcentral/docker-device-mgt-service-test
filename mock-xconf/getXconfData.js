@@ -41,6 +41,15 @@ function readJsonFile(count) {
   else if(count == 1){
     var filePath = path.join('/etc/xconf', 'xconf-cdl-invalid-response.json');
   }
+  else if(count == 2){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalidpci-response.json');
+  }
+  else if(count == 3){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-delaydwnl-response.json');
+  }
+  else if(count == 4){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-reboottrue-response.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
   }
@@ -100,16 +109,11 @@ function requestHandler(req, res) {
   console.log('json'+JSON.stringify(savedrequest_json));
   console.log('Request method: ' + req.method);
   if (req.method === 'GET') {
-
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
-
       return handleFirmwareData(req, res, queryObject,0); 
-
     }
     else if (req.url.startsWith('/getfirmwarefile')) {
-      
       return handleFirmwareFileDownload(req, res, queryObject,0); 
-
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
       res.writeHead(404);
@@ -123,6 +127,15 @@ function requestHandler(req, res) {
     }
     else if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,1); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getinvalidpcifirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,2); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/delaydwnlfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,3); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getreboottruefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,4); 
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
       res.writeHead(404);
