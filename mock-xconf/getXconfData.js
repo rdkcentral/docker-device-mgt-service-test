@@ -56,6 +56,9 @@ function readJsonFile(count) {
   else if(count == 6){
     var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-404response.json');
   }
+  else if(count == 7){
+    var filePath = path.join('/etc/xconf', 'xconf-certbundle-response.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
   }
@@ -148,6 +151,9 @@ function requestHandler(req, res) {
     }
     else if (req.url.startsWith('/firmwareupdate/get404peripheralfirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,6); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getcertbundlefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,7); 
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
       res.writeHead(404);

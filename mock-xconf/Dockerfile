@@ -44,6 +44,7 @@ COPY xconf-cdl-delaydwnl-response.json /etc/xconf/xconf-cdl-delaydwnl-response.j
 COPY xconf-cdl-reboottrue-response.json /etc/xconf/xconf-cdl-reboottrue-response.json
 COPY xconf-peripheralcdl-response.json /etc/xconf/xconf-peripheralcdl-response.json
 COPY xconf-peripheralcdl-404response.json /etc/xconf/xconf-peripheralcdl-404response.json
+COPY xconf-certbundle-response.json /etc/xconf/xconf-certbundle-response.json
 COPY xconf-rfc-response.json /etc/xconf/xconf-rfc-response.json
 COPY firmware_test.bin /etc/xconf/firmware_test.bin
 COPY firmware_test.bin /etc/xconf/ABCD_firmware_test.bin
