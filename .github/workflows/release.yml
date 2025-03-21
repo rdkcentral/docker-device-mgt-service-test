@@ -49,7 +49,6 @@ jobs:
           repository: 'rdkcentral/rdk_logger'
           ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/rdk_logger'
-          token: ${{ secrets.GH_RO_TKN }}
 
       - name: Check out the dependent rdkcentral/webconfigframework repository
         uses: actions/checkout@v4
@@ -57,7 +56,6 @@ jobs:
           repository: 'rdkcentral/WebconfigFramework'
           ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/WebconfigFramework'
-          token: ${{ secrets.GH_RO_TKN }}       
 
       - name: Check out the dependent rdkcentral/libSyscallWrapper repository
         uses: actions/checkout@v4
@@ -65,7 +63,6 @@ jobs:
           repository: 'rdkcentral/libSyscallWrapper'
           ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/libSyscallWrapper'
-          token: ${{ secrets.GH_RO_TKN }}
   
       - name: Check out the dependent rdkcentral/common_utilities repository
         uses: actions/checkout@v4
@@ -73,7 +70,6 @@ jobs:
           repository: 'rdkcentral/common_utilities'
           ref: 'IMPORT_INITIAL_develop'
           path: 'device-management-service/native-platform/common_utilities'
-          token: ${{ secrets.GH_RO_TKN }}  
 
       - name: Log in to enterprise registry
         uses: docker/login-action@v2
