@@ -105,6 +105,10 @@ RUN rm -rf /opt/containers
 # Packages required for tr69hostif
 RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev procps libprocps-dev 
 
+COPY tr69hostif /opt/tr69hostif
+RUN cd /opt/tr69hostif && sh cov_build.sh
+RUN rm -rf /opt/tr69hostif
+
 # Install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
 RUN apt-get install -q -y nodejs
@@ -120,6 +124,7 @@ RUN mkdir -p /opt/logs
 RUN mkdir -p /etc
 RUN mkdir -p /bin
 RUN mkdir -p /lib/rdk
+RUN mkdir -p /opt/secure/RFC/
 
 RUN echo "imagename:T2_Container_${REVISION}" >> /version.txt
 
@@ -138,6 +143,28 @@ RUN mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME
 
 COPY dcm.properties /etc/dcm.properties
 COPY include.properties /etc/include.properties
+
+COPY tr69hostif/src/hostif/parodusClient/waldb/data-model/data-model-tv.xml /etc/data-model-tv.xml
+COPY tr69hostif/src/hostif/parodusClient/waldb/data-model/data-model-generic.xml /etc/data-model-generic.xml
+
+RUN sed '/<\/model>/d; /<\/dm:document>/d' /etc/data-model-tv.xml > /etc/data-model.xml
+RUN sed '/<?xml/,/<model/ d' /etc/data-model-generic.xml >> /etc/data-model.xml
+
+COPY tr69hostif/src/integrationtest/conf/mgrlist.conf /etc/
+COPY tr69hostif/src/integrationtest/conf/rfc.properties /etc/
+COPY tr69hostif/src/integrationtest/conf/rfcdefaults.ini /tmp/
+COPY tr69hostif/src/integrationtest/conf/tr181store.ini /opt/secure/RFC/
+COPY tr69hostif/src/integrationtest/conf/bootstrap.ini /opt/secure/RFC/
+COPY tr69hostif/partners_defaults.json /etc/
+
+RUN touch /opt/secure/RFC/tr181localstore.ini
+RUN touch /opt/persistent/tr181localstore.ini
+RUN touch /opt/secure/RFC/bootstrap.journal
+
+COPY deviceinfo_default.sh /usr/local/bin/deviceinfo_default.sh
+RUN chmod +x /usr/local/bin/deviceinfo_default.sh
+RUN sh /usr/local/bin/deviceinfo_default.sh
+RUN dos2unix /etc/data-model.xml
 
 COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
 RUN chmod +x /lib/rdk/uploadSTBLogs.sh

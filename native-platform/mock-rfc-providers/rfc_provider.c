@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 14
+#define NUMBER_OF_DATA_ELEMENTS 1
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -66,20 +66,7 @@ char dataElementValues[NUMBER_OF_DATA_ELEMENTS][256];
 bool rdkRemoteDebuggerIssueType = false;
 
 char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
-    "https://mockxconf:50050/loguploader/getT2DCMSettings",
-    "true",
-    "AA:BB:CC:DD:EE:FF",
-    "10.0.0.1",
-    "Platform_Container_Test_DEVICE",
-    "Platform_Cotainer_1.0.0",
-    "false",
-    "global",
-    "false",
-    "DOCKER",
-    "true",
-    "",
-    "",
-    "RDK-RRD-Test"
+    "false"
 };
 
 void init_dataElementValues()
@@ -93,20 +80,7 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.ConfigURL",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.Enable",
-    "Device.DeviceInfo.X_COMCAST-COM_STB_MAC",
-    "Device.DeviceInfo.X_COMCAST-COM_STB_IP",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID",
-    "Device.DeviceInfo.X_COMCAST-COM_FirmwareFilename",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MTLS.Enable",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId",
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
-    "Device.DeviceInfo.ModelName",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
 };
 
 
@@ -116,72 +90,6 @@ void init_dataElementValues()
 rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
     {
         dataElementNames[0], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[1], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-
-    },
-    {
-        dataElementNames[2], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[3], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[4], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[5], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[6], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-       dataElementNames[7], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[8], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[9], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[10], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        RRD_DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[11], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[12], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[13], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
     }
