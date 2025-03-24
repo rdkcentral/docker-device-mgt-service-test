@@ -133,6 +133,7 @@ RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
 RUN echo "DEVICE_MAC=AA:BB:CC:DD:EE:FF" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
+RUN echo "Platform_Cotainer_1.0.0" >> /tmp/currently_running_image_name
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent

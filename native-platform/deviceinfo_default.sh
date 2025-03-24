@@ -12,3 +12,14 @@ sed -i '/X_COMCAST-COM_FirmwareFilename/ {n; n; a\
 sed -i '/ModelName/ {n; n; a\
         <default type="factory" value="DOCKER"/>
 }' /etc/data-model.xml
+sed -i '/ConfigURL/ {n; n; a\
+        <default type="factory" value="https://mockxconf:50050/loguploader/getT2DCMSettings"/>
+}' /etc/data-model.xml
+sed -i '/AccountID/ {n; n; a\
+        <default type="factory" value="Platform_Container_Test_DEVICE"/>
+}' /etc/data-model.xml
+sed -i '/Telemetry.MTLS/ {n; n; n; n; d;
+}' /etc/data-model.xml
+sed -i '/Telemetry.MTLS/ {n; n; n; a\
+        <default type="factory" value="false"/>
+}' /etc/data-model.xml
