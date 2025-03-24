@@ -38,12 +38,33 @@ function readJsonFile(count) {
   if(count == 0){
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
   }
+  else if(count == 1){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalid-response.json');
+  }
+  else if(count == 2){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalidpci-response.json');
+  }
+  else if(count == 3){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-delaydwnl-response.json');
+  }
+  else if(count == 4){
+    var filePath = path.join('/etc/xconf', 'xconf-cdl-reboottrue-response.json');
+  }
+  else if(count == 5){
+    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-response.json');
+  }
+  else if(count == 6){
+    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-404response.json');
+  }
+  else if(count == 7){
+    var filePath = path.join('/etc/xconf', 'xconf-certbundle-response.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
-
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
+    console.log('Data received1: ' + fileData);
     return JSON.parse(fileData);
   } catch (error) {
     console.error('Error reading or parsing JSON file:', error);
@@ -57,7 +78,7 @@ function handleFirmwareData(req, res, queryObject, file) {
     data += chunk;
   });
   req.on('end', function() {
-    console.log('Data received: ' + data);
+    console.log('Data received2: ' + data);
   });
 
   if (save_request) {
@@ -66,6 +87,7 @@ function handleFirmwareData(req, res, queryObject, file) {
 
   res.writeHead(200, {'Content-Type': 'application/json'});
   res.end(JSON.stringify(readJsonFile(file)));
+  //console.log('Data received After stringfy: ' + JSON.stringify(readJsonFile(file)));
   return;
 }
 
@@ -94,45 +116,55 @@ function requestHandler(req, res) {
   console.log('Query Object: ' + JSON.stringify(queryObject));
   console.log('Request received: ' + req.url);
   console.log('json'+JSON.stringify(savedrequest_json));
+  console.log('Request method: ' + req.method);
   if (req.method === 'GET') {
-
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
-
       return handleFirmwareData(req, res, queryObject,0); 
-
     }
     else if (req.url.startsWith('/getfirmwarefile')) {
-      
       return handleFirmwareFileDownload(req, res, queryObject,0); 
-
     }
     else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
       res.writeHead(404);
       res.end("404 No Content");
       return;
     }
-}
-else if (req.method === 'POST') {
-  // TO BE IMPLEMENTED
-  if (req.url.startsWith('/updateFirmware')) {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      const postData = JSON.parse(body);
-      const redirect_json = { ...postData };
-      redirect_json[new Date().toISOString()] = { ...queryObject };;// Example of adding a timestamped entry
-
-      res.writeHead(200, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify(redirect_json));
-  });
   }
-
-}
+  else if (req.method === 'POST') {
+    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,0); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,1); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getinvalidpcifirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,2); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/delaydwnlfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,3); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getreboottruefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,4); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getperipheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,5); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/get404peripheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,6); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/getcertbundlefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,7); 
+    }
+    else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
+      res.writeHead(404);
+      res.end("404 No Content");
+      return;
+    }
+  }
   res.writeHead(200);
   res.end("Server is Up Please check the request....");
 }
+
 const serverInstance = https.createServer(options, requestHandler);
 serverInstance.listen(
   options.port,

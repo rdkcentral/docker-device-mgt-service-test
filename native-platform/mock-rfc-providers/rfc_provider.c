@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 14
+#define NUMBER_OF_DATA_ELEMENTS 1
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -45,29 +45,28 @@
         NULL \
     }
 
+#define RRD_DATA_HANDLER_MACRO \
+    { \
+        rrdDataGetHandler, \
+        rrdDataSetHandler, \
+        NULL, \
+        NULL, \
+        NULL, \
+        NULL \
+    }
 
 rbusHandle_t handle1;
 rbusError_t multiRbusProvider_SampleDataGetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
 rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
+rbusError_t rrdDataGetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetHandlerOptions_t* opts);
+rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
 
 // Add a string array to store the data element values
 char dataElementValues[NUMBER_OF_DATA_ELEMENTS][256];
+bool rdkRemoteDebuggerIssueType = false;
 
 char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
-    "https://mockxconf:50050/loguploader/getT2DCMSettings",
-    "true",
-    "AA:BB:CC:DD:EE:FF",
-    "10.0.0.1",
-    "Platform_Container_Test_DEVICE",
-    "Platform_Cotainer_1.0.0",
-    "false",
-    "global",
-    "false",
-    "DOCKER",
-    "true",
-    "",
-    "",
-    "RDK-RRD-Test"
+    "false"
 };
 
 void init_dataElementValues()
@@ -81,20 +80,7 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.ConfigURL",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.Enable",
-    "Device.DeviceInfo.X_COMCAST-COM_STB_MAC",
-    "Device.DeviceInfo.X_COMCAST-COM_STB_IP",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID",
-    "Device.DeviceInfo.X_COMCAST-COM_FirmwareFilename",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.Telemetry.MTLS.Enable",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_Syndication.PartnerId",
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
-    "Device.DeviceInfo.ModelName",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.IssueType",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.WebCfgData",
-    "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.InstallPackage"
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
 };
 
 
@@ -104,72 +90,6 @@ void init_dataElementValues()
 rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
     {
         dataElementNames[0], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[1], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-
-    },
-    {
-        dataElementNames[2], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[3], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[4], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[5], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[6], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-       dataElementNames[7], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[8], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[9], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[10], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[11], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[12], // The name of the data element
-        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
-        DATA_HANDLER_MACRO
-    },
-    {
-        dataElementNames[13], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
     }
@@ -333,4 +253,36 @@ rbusError_t multiRbusProvider_SampleDataGetHandler(rbusHandle_t handle, rbusProp
     return RBUS_ERROR_SUCCESS;
 }
 
+rbusError_t rrdDataGetHandler(rbusHandle_t handle, rbusProperty_t property, rbusGetHandlerOptions_t* opts) {
+    (void)handle;
+    (void)opts;
 
+    const char* name = rbusProperty_GetName(property);
+    rbusValue_t value;
+    if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable") == 0) {
+        rbusValue_Init(&value);
+        rbusValue_SetBoolean(value, rdkRemoteDebuggerIssueType);
+        rbusProperty_SetValue(property, value);
+        rbusValue_Release(value);
+        printf("Get handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
+        return RBUS_ERROR_SUCCESS;
+    }
+
+    return RBUS_ERROR_BUS_ERROR;
+}
+
+rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts) {
+    (void)handle;
+    (void)opts;
+
+    const char* name = rbusProperty_GetName(property);
+    rbusValue_t value = rbusProperty_GetValue(property);
+
+    if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable") == 0) {
+        rdkRemoteDebuggerIssueType = rbusValue_GetBoolean(value);
+        printf("Set handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
+        return RBUS_ERROR_SUCCESS;
+    }
+
+    return RBUS_ERROR_BUS_ERROR;
+}

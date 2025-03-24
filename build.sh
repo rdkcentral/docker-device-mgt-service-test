@@ -34,11 +34,13 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
+rm -rf tr69hostif
 
 git clone https://github.com/rdkcentral/rdk_logger.git
 git clone https://github.com/rdkcentral/WebconfigFramework.git
 git clone https://github.com/rdkcentral/libSyscallWrapper.git
 git clone https://github.com/rdkcentral/common_utilities.git
+git clone https://github.com/rdkcentral/tr69hostif.git
 
 # Dump the contents of /etc/xconf/certs/mock-xconf-server-cert.pem from above container into a file called mock-xconf-server-cert.pem
 docker run --rm ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem > mock-xconf-server-cert.pem
@@ -50,6 +52,7 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
+rm -rf tr69hostif
 cd -
 
 

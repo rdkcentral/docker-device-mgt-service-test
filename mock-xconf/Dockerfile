@@ -38,8 +38,18 @@ RUN mkdir -p /etc/xconf/
 COPY xconf-dcm-response.json /etc/xconf/xconf-dcm-response.json
 COPY xconf-dcm-response1.json /etc/xconf/xconf-dcm-response1.json
 COPY xconf-cdl-response.json /etc/xconf/xconf-cdl-response.json
+COPY xconf-cdl-invalid-response.json /etc/xconf/xconf-cdl-invalid-response.json
+COPY xconf-cdl-invalidpci-response.json /etc/xconf/xconf-cdl-invalidpci-response.json
+COPY xconf-cdl-delaydwnl-response.json /etc/xconf/xconf-cdl-delaydwnl-response.json
+COPY xconf-cdl-reboottrue-response.json /etc/xconf/xconf-cdl-reboottrue-response.json
+COPY xconf-peripheralcdl-response.json /etc/xconf/xconf-peripheralcdl-response.json
+COPY xconf-peripheralcdl-404response.json /etc/xconf/xconf-peripheralcdl-404response.json
+COPY xconf-certbundle-response.json /etc/xconf/xconf-certbundle-response.json
 COPY xconf-rfc-response.json /etc/xconf/xconf-rfc-response.json
 COPY firmware_test.bin /etc/xconf/firmware_test.bin
+COPY firmware_test.bin /etc/xconf/ABCD_firmware_test.bin
+COPY firmware_test.bin /etc/xconf/ABCD_PDRI_firmware_test.bin
+COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
