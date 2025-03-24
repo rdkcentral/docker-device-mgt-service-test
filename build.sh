@@ -34,6 +34,7 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
+rm -rf tr69hostif
 
 git clone https://github.com/rdkcentral/rdk_logger.git
 git clone https://github.com/rdkcentral/WebconfigFramework.git
@@ -51,6 +52,7 @@ rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
+rm -rf tr69hostif
 cd -
 
 
