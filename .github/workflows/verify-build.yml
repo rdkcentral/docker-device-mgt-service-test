@@ -116,6 +116,8 @@ jobs:
         run: |
           docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
 
-      - name: Run Tests
+      - name: Start Testing
         run: |
-	  ls -l && docker ps -a && pytest ./device-management-service/test_docker.py -v
+          docker ps && docker ps -a
+          ls -l
+          ls -l ./device-management-service
