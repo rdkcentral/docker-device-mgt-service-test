@@ -118,8 +118,4 @@ jobs:
 
       - name: Run Tests
         run: |
-	  ls -l
-	  ls -l device-management-service
-          docker ps
-          docker ps -a
-	  pytest device-management-service/test_docker.py -v
+	  ls -l && docker ps -a && pytest ./device-management-service/test_docker.py -v
