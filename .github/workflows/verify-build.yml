@@ -2,7 +2,7 @@ name: Verify building of test containers
 
 on:
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop" , "topic/RDKE-765" ]
 
 env:
     REGISTRY_ROOT: ghcr.io
@@ -71,6 +71,14 @@ jobs:
           repository: 'rdkcentral/tr69hostif'
           ref: '1.0.14'
           path: 'device-management-service/native-platform/tr69hostif'
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install pytest docker testcontainers
        
       - name: Build mock xconf image
         uses: docker/build-push-action@v4
@@ -100,4 +108,16 @@ jobs:
         run: |
           mkdir -p /tmp/L2_CONTAINER_SHARED_VOLUME
 
-        
+      - name: Start mock-xconf service
+        run: |
+          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50053:50053 -p 50054:50054 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
+
+      - name: Start native-platform service
+        run: |
+          docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
+
+      - name: Start Testing
+        run: |
+          docker ps && docker ps -a
+          ls -l
+          ls -l ./device-management-service && pytest device-management-service/test_docker.py -v
