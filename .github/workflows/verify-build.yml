@@ -120,4 +120,4 @@ jobs:
         run: |
           docker ps && docker ps -a
           ls -l
-          ls -l ./device-management-service
+          ls -l ./device-management-service && pytest device-management-service/test_docker.py -v
