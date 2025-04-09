@@ -2,7 +2,7 @@ name: Verify building of test containers
 
 on:
   pull_request:
-    branches: [ "develop" , "topic/RDKE-765" ]
+    branches: [ "develop" , "main" ]
 
 env:
     REGISTRY_ROOT: ghcr.io

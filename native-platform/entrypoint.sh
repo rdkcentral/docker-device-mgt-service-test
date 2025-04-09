@@ -24,6 +24,16 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
+
+# enable core dumps
+ulimit -c unlimited
+mkdir -p /tmp/core
+# Set core pattern
+sysctl --system set-default core
+sysctl -w kernel.core_pattern=/tmp/core/%e.%p.core
+
+
+
 # Build and install RFC parameter provider and tr69hostif
 
 rt_pid=`pidof rtrouted`

@@ -19,3 +19,10 @@ services:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    ulimits:
+      core:
+        soft: -1
+        hard: -1
+    privileged: true
+    security_opt:
+      - seccomp:unconfined
