@@ -2,7 +2,8 @@
 on:
   push:
     branches:
-      - main
+      - 'develop'
+      - 'main'
 
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -20,7 +21,6 @@ jobs:
         ports:
           - 5000:5000
 
-    if : ${{ github.event_name == 'push' && github.ref_type == 'tag' }}  
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -30,12 +30,6 @@ jobs:
         with:
           driver-opts: network=host
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -92,7 +86,6 @@ jobs:
           push: true
           tags: |
             ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:${{ github.ref_name }}
-            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:latest
           load: false
 
       - name: Dump certificate from mock-xconf container
@@ -109,7 +102,6 @@ jobs:
           push: true
           tags: |
             ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/native-platform:${{ github.ref_name }}
-            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/native-platform:latest
           load: false
        
    
