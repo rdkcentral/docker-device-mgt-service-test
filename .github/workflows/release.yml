@@ -81,7 +81,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:${{ github.ref_name }}
+            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:ci
           load: false
 
       - name: Dump certificate from mock-xconf container
@@ -97,7 +97,7 @@ jobs:
             - REVISION=${{ github.ref_name }}
           push: true
           tags: |
-            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/native-platform:${{ github.ref_name }}
+            ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/native-platform:ci
           load: false
        
    
