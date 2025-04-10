@@ -1,4 +1,3 @@
-name: Build and Push Docker Image On Release
 
 on:
   push:
@@ -83,7 +82,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY_ROOT }}
           username: ${{ github.actor }}
-          password: ${{ secrets.PACAKGE_UPDATE_KEY }}
+          password: ${{ secrets.PACKAGE_UPDATE_KEY }}
 
       - name: Build and push mock xconf image
         uses: docker/build-push-action@v4
