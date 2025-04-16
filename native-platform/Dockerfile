@@ -132,6 +132,7 @@ RUN echo "BUILD_TYPE=PROD" > /etc/device.properties
 RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
 RUN echo "DEVICE_MAC=AA:BB:CC:DD:EE:FF" >> /etc/device.properties
+RUN echo "RDK_PROFILE=STB" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 RUN echo "Platform_Cotainer_1.0.0" >> /tmp/currently_running_image_name
 
@@ -147,9 +148,7 @@ COPY include.properties /etc/include.properties
 
 COPY tr69hostif/src/hostif/parodusClient/waldb/data-model/data-model-tv.xml /etc/data-model-tv.xml
 COPY tr69hostif/src/hostif/parodusClient/waldb/data-model/data-model-generic.xml /etc/data-model-generic.xml
-
-RUN sed '/<\/model>/d; /<\/dm:document>/d' /etc/data-model-tv.xml > /etc/data-model.xml
-RUN sed '/<?xml/,/<model/ d' /etc/data-model-generic.xml >> /etc/data-model.xml
+COPY tr69hostif/src/hostif/parodusClient/waldb/data-model/data-model-stb.xml /etc/data-model-stb.xml 
 
 COPY tr69hostif/src/integrationtest/conf/mgrlist.conf /etc/
 COPY tr69hostif/src/integrationtest/conf/rfc.properties /etc/
@@ -165,7 +164,8 @@ RUN touch /opt/secure/RFC/bootstrap.journal
 COPY deviceinfo_default.sh /usr/local/bin/deviceinfo_default.sh
 RUN chmod +x /usr/local/bin/deviceinfo_default.sh
 RUN sh /usr/local/bin/deviceinfo_default.sh
-RUN dos2unix /etc/data-model.xml
+RUN dos2unix /etc/data-model-generic.xml
+RUN dos2unix /etc/data-model-stb.xml
 
 COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
 RUN chmod +x /lib/rdk/uploadSTBLogs.sh
