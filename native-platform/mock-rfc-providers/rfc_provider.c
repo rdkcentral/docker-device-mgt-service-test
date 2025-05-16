@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 1
+#define NUMBER_OF_DATA_ELEMENTS 2
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -67,6 +67,7 @@ bool rdkRemoteDebuggerIssueType = false;
 
 char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
     "false"
+    "false"
 };
 
 void init_dataElementValues()
@@ -80,7 +81,8 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
+    "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
 };
 
 
@@ -90,6 +92,11 @@ void init_dataElementValues()
 rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
     {
         dataElementNames[0], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[1], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
     }
@@ -282,6 +289,47 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
         rdkRemoteDebuggerIssueType = rbusValue_GetBoolean(value);
         printf("Set handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
         return RBUS_ERROR_SUCCESS;
+    }
+    if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus") == 0) {
+        rbusError_t rc = RBUS_ERROR_BUS_ERROR;
+        rbusValue_t value, byVal, preValue;
+        rbusObject_t data;
+        rbusEvent_t event = {0};
+
+        rbusValue_Init(&value);
+        rbusValue_Init(&byVal);
+	    rbusValue_Init(&preValue);
+        rbusValue_SetBoolean(value, isenabled);
+	    rbusValue_SetBoolean(preValue, stMsgData->paramValue);
+        rbusValue_SetString(byVal, "tr69hostif");
+	
+
+	    rbusObject_Init(&data, NULL);
+        rbusObject_SetValue(data, "value", value);
+	    rbusObject_SetValue(data, "oldValue", preValue);
+        rbusObject_SetValue(data, "by", byVal);
+
+        event.name = RDM_DOWNLOAD_EVENT;
+        event.data = data;
+        event.type = RBUS_EVENT_VALUE_CHANGED;
+
+        rc = rbusEvent_Publish(rbusHandle, &event);
+        if ((rc != RBUS_ERROR_SUCCESS) && (rc != RBUS_ERROR_NOSUBSCRIBERS))
+        {
+            RDK_LOG(RDK_LOG_ERROR, LOG_TR69HOSTIF, "[%s:%d]: RBUS Publish event failed for %s with return : %s !!! \n ", __FUNCTION__, __LINE__,RDM_DOWNLOAD_EVENT , rbusError_ToString(rc));
+	    ret = NOK;
+        }
+        else
+        {
+            RDK_LOG(RDK_LOG_INFO, LOG_TR69HOSTIF, "[%s:%d]: RBUS Publish event success for %s !!! \n ", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+            ret = OK;
+        }
+
+        rbusValue_Release(value);
+        rbusValue_Release(byVal);
+	    rbusValue_Release(preValue);
+        rbusObject_Release(data);
+    }
     }
 
     return RBUS_ERROR_BUS_ERROR;
