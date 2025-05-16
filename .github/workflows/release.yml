@@ -74,7 +74,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/tr69hostif'
-          ref: '1.1.4'
+          ref: '1.1.7'
           path: 'device-management-service/native-platform/tr69hostif'
 
       - name: Log in to enterprise registry
