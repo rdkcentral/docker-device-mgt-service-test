@@ -330,7 +330,6 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
 	    rbusValue_Release(preValue);
         rbusObject_Release(data);
     }
-    }
 
     return RBUS_ERROR_BUS_ERROR;
 }
