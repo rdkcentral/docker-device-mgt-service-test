@@ -31,6 +31,7 @@
 #include <rtMemory.h>
 
 #include <rtMemory.h>
+#define RDM_DOWNLOAD_EVENT "Device.DeviceInfo.X_RDKCENTRAL-COM_RDKDownloadManager.DownloadStatus"
 
 
 #define NUMBER_OF_DATA_ELEMENTS 2
