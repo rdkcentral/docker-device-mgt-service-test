@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
 RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update && apt-get install -y \
     python3-pytest-bdd
     
-RUN pip3 install requests pytest-ordering pytest-json-report pytest-html
+RUN pip3 install requests pytest-ordering pytest-json-report pytest-html msgpack
 
 # Install CMake
 RUN apt-get update && apt-get install -y cmake
@@ -133,6 +133,12 @@ RUN echo "DEVICE_NAME=DEVELOPER_CONTAINER" >> /etc/device.properties
 RUN echo "MODEL_NUM=L2CNTR" >> /etc/device.properties
 RUN echo "DEVICE_MAC=AA:BB:CC:DD:EE:FF" >> /etc/device.properties
 RUN echo "RDK_PROFILE=STB" >> /etc/device.properties
+RUN echo "DEVICE_TYPE=mediaclient" >> /etc/device.properties
+RUN echo "DIFW_PATH=/opt/CDL" >> /etc/device.properties
+RUN echo "ENABLE_MAINTENANCE=false" >> /etc/devic.properties
+RUN echo "ENABLE_SOFTWARE_OPTOUT=false" >> /etc/devic.properties
+RUN echo "ESTB_INTERFACE=eth0" >> /etc/devic.properties
+RUN echo "PDRI_ENABLED=true" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 RUN echo "Platform_Cotainer_1.0.0" >> /tmp/currently_running_image_name
 
