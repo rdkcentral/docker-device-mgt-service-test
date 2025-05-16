@@ -298,15 +298,15 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
 
         rbusValue_Init(&value);
         rbusValue_Init(&byVal);
-	    rbusValue_Init(&preValue);
+	rbusValue_Init(&preValue);
         rbusValue_SetBoolean(value, isenabled);
-	    rbusValue_SetBoolean(preValue, stMsgData->paramValue);
+	rbusValue_SetBoolean(preValue, stMsgData->paramValue);
         rbusValue_SetString(byVal, "tr69hostif");
 	
 
-	    rbusObject_Init(&data, NULL);
+	rbusObject_Init(&data, NULL);
         rbusObject_SetValue(data, "value", value);
-	    rbusObject_SetValue(data, "oldValue", preValue);
+	rbusObject_SetValue(data, "oldValue", preValue);
         rbusObject_SetValue(data, "by", byVal);
 
         event.name = RDM_DOWNLOAD_EVENT;
