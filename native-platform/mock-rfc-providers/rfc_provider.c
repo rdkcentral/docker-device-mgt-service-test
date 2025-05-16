@@ -316,18 +316,18 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
         rc = rbusEvent_Publish(rbusHandle, &event);
         if ((rc != RBUS_ERROR_SUCCESS) && (rc != RBUS_ERROR_NOSUBSCRIBERS))
         {
-            RDK_LOG(RDK_LOG_ERROR, LOG_TR69HOSTIF, "[%s:%d]: RBUS Publish event failed for %s with return : %s !!! \n ", __FUNCTION__, __LINE__,RDM_DOWNLOAD_EVENT , rbusError_ToString(rc));
+	    printf("RBUS Publish event failed for rrd-rdkdownload");
 	    ret = NOK;
         }
         else
         {
-            RDK_LOG(RDK_LOG_INFO, LOG_TR69HOSTIF, "[%s:%d]: RBUS Publish event success for %s !!! \n ", __FUNCTION__, __LINE__, RDM_DOWNLOAD_EVENT);
+            printf("RBUS Publish event success for rrd-rdkdownload");
             ret = OK;
         }
 
         rbusValue_Release(value);
         rbusValue_Release(byVal);
-	    rbusValue_Release(preValue);
+	rbusValue_Release(preValue);
         rbusObject_Release(data);
     }
 
