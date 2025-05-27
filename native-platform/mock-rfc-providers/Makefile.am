@@ -1,4 +1,3 @@
-
 ##########################################################################
 # If not stated otherwise in this file or this component's LICENSE
 # file the following copyright and licenses apply:
@@ -23,7 +22,7 @@ RBUS_INSTALL_DIR = /usr/local
 LOCAL_DIR = /usr/local
 
 rfc_provider_SOURCES = rfc_provider.c
-rfc_provider_CFLAGS = -I$(RBUS_INSTALL_DIR)/include/rtmessage -I$(RBUS_INSTALL_DIR)/include/msgpack -I$(RBUS_INSTALL_DIR)/include/rbus -I$(RBUS_INSTALL_DIR)/include
+rfc_provider_CFLAGS = -I$(RBUS_INSTALL_DIR)/include/rtmessage -I/usr/remote_debugger/src  -I/usr/local/include -I$(RBUS_INSTALL_DIR)/include/msgpack -I$(RBUS_INSTALL_DIR)/include/rbus -I$(RBUS_INSTALL_DIR)/include
 rfc_provider_LDFLAGS = -L${RBUS_INSTALL_DIR}/lib  -L$(LOCAL_DIR)/lib -lpthread -lm -lrt -lrtMessage -lrbus -lmsgpackc
 
 
