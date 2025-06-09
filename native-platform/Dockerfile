@@ -28,11 +28,12 @@ RUN apt-get update && apt-get install -y libsoup-3.0
 # Install iptables and net-tools
 RUN apt-get update && apt-get install -y iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
-    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy && \
-    update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
 
 RUN update-alternatives --install /usr/sbin/arptables arptables /usr/sbin/arptables-legacy 10 && \ 
-    update-alternatives --set arptables /usr/sbin/arptables-legacy 
+    update-alternatives --set arptables /usr/sbin/arptables-legacy && \
+    update-alternatives --install /usr/sbin/ebtables ebtables /usr/sbin/ebtables-legacy 10 && \
+    update-alternatives --set ebtables /usr/sbin/ebtables-legacy
 
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
