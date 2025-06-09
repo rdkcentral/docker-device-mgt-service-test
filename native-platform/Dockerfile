@@ -29,8 +29,8 @@ RUN apt-get update && apt-get install -y libsoup-3.0
 RUN apt-get update && apt-get install -y iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
-
-RUN update-alternatives --install /usr/sbin/arptables arptables /usr/sbin/arptables-legacy 10 && \ 
+RUN apt-get update && apt-get install -y arptables-legacy ebtables-legacy && \
+    update-alternatives --install /usr/sbin/arptables arptables /usr/sbin/arptables-legacy 10 && \ 
     update-alternatives --set arptables /usr/sbin/arptables-legacy && \
     update-alternatives --install /usr/sbin/ebtables ebtables /usr/sbin/ebtables-legacy 10 && \
     update-alternatives --set ebtables /usr/sbin/ebtables-legacy
