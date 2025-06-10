@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 RUN apt-get update && apt-get install -y libsoup-3.0
 
 # Install iptables and net-tools
-RUN apt-get update && apt-get install -y iptables net-tools && \
+RUN apt-get update && apt-get install -y iproute2 iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
 RUN apt-get update && apt-get install -y arptables ebtables
@@ -151,6 +151,9 @@ RUN echo "ESTB_INTERFACE=eth0" >> /etc/devic.properties
 RUN echo "PDRI_ENABLED=true" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 RUN echo "Platform_Cotainer_1.0.0" >> /tmp/currently_running_image_name
+RUN echo "ETHERNET_INTERFACE=eth0" >> /etc/device.properties
+RUN echo "WIFI_INTERFACE=wlan0" >> /etc/device.properties
+RUN echo "MOCA_INTERFACE=eth0" >> /etc/device.properties
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
