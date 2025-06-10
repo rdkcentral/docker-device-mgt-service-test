@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 RUN apt-get update && apt-get install -y libsoup-3.0
 
 # Install iptables and net-tools
-RUN apt-get update && apt-get install -y iptables net-tools && \
+RUN apt-get update && apt-get install -y iproute2 iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
 RUN apt-get update && apt-get install -y arptables ebtables
@@ -194,6 +194,7 @@ RUN chmod +x /lib/rdk/utils.sh
 
 COPY timestamp /bin/timestamp
 RUN chmod +x /bin/timestamp
+ENV ETHERNET_INTERFACE=eth0
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
