@@ -197,6 +197,7 @@ RUN chmod +x /lib/rdk/utils.sh
 
 COPY timestamp /bin/timestamp
 RUN chmod +x /bin/timestamp
+ENV ETHERNET_INTERFACE=eth0
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
