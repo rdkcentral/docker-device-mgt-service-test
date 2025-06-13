@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y iproute2 iptables net-tools && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
 
 RUN apt-get update && apt-get install -y arptables ebtables
+
 RUN update-alternatives --install /usr/sbin/arptables arptables /usr/sbin/arptables-legacy 10 && \ 
     update-alternatives --set arptables /usr/sbin/arptables-legacy 
 
