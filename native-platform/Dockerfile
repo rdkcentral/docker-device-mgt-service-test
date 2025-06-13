@@ -25,8 +25,6 @@ RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 # Add libsoup-3.0 support
 RUN apt-get update && apt-get install -y libsoup-3.0
 
-RUN apt-get update && apt-get install -y libds-dev
-
 # Install iptables and net-tools
 RUN apt-get update && apt-get install -y iproute2 iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
