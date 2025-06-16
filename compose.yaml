@@ -15,6 +15,10 @@ services:
   l2-container:
     image: "ghcr.io/docker-device-mgt-service-test/native-platform:latest"
     container_name: "native-platform"
+    ports:
+      - "22:22"     
+      - "7070:7070"       
+      - "9090:9090"  
     depends_on:
       - mock-xconf
     volumes:

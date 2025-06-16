@@ -16,7 +16,8 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           libmsgpack-dev libsystemd-dev libssl-dev libcjson-dev python3-pip libsqlite3-dev
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
-          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev
+          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev \
+          iproute2 nmap netcat
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
@@ -26,7 +27,7 @@ RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 RUN apt-get update && apt-get install -y libsoup-3.0
 
 # Install iptables and net-tools
-RUN apt-get update && apt-get install -y iproute2 iptables net-tools && \
+RUN apt-get update && apt-get install -y iptables net-tools && \
     update-alternatives --set iptables /usr/sbin/iptables-legacy && \
     update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
 
@@ -191,6 +192,8 @@ RUN dos2unix /etc/data-model-stb.xml
 
 COPY mock_configparamgen.sh /usr/bin/configparamgen
 RUN chmod +x /usr/bin/configparamgen
+CMD python3 -m http.server 9090 & nc -lp 7070 &
+
 
 COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
 RUN chmod +x /lib/rdk/uploadSTBLogs.sh
@@ -201,6 +204,7 @@ RUN chmod +x /lib/rdk/utils.sh
 COPY timestamp /bin/timestamp
 RUN chmod +x /bin/timestamp
 
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
@@ -210,3 +214,6 @@ RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LI
 #CMD ["/bin/bash"]
 
 CMD ["/usr/local/bin/entrypoint.sh"]
+EXPOSE 22
+EXPOSE 7070
+EXPOSE 9090
