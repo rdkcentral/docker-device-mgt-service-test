@@ -17,7 +17,7 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
           libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev \
-          iproute2 nmap netcat
+          iproute2 nmap
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
@@ -190,10 +190,7 @@ RUN sh /usr/local/bin/deviceinfo_default.sh
 RUN dos2unix /etc/data-model-generic.xml
 RUN dos2unix /etc/data-model-stb.xml
 
-COPY mock_configparamgen.sh /usr/bin/configparamgen
-RUN chmod +x /usr/bin/configparamgen
-CMD python3 -m http.server 9090 & nc -lp 7070 &
-
+CMD python3 -m http.server 9090 &  nc -l -k -p 7070 &
 
 COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
 RUN chmod +x /lib/rdk/uploadSTBLogs.sh
