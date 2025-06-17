@@ -17,7 +17,7 @@ RUN mkdir -p /opt
 RUN cd /opt
 RUN openssl genrsa -out key.pem 2048
 RUN openssl req -new -days 730 -key key.pem -out csr.pem -subj "/C=US/ST=CA/L=San Francisco/O=Platform Security/OU=Platform Security/CN=mockxconf" 
-RUN openssl x509 -req -in csr.pem -signkey key.pem -out cert.pem
+RUN openssl x509 -req -in csr.pem -signkey key.pem -out cert.pem -days 730
 
 # Create a directory to store the certificates
 RUN mkdir -p /etc/xconf/certs
