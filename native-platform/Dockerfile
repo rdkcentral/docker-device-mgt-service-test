@@ -17,7 +17,7 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
           libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev \
-          iproute2 nmap netcat
+          iproute2 nmap
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
