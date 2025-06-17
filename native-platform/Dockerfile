@@ -16,7 +16,8 @@ RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           libmsgpack-dev libsystemd-dev libssl-dev libcjson-dev python3-pip libsqlite3-dev
           
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
-          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev
+          libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev \
+          iproute2 nmap netcat
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
@@ -24,6 +25,19 @@ RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 
 # Add libsoup-3.0 support
 RUN apt-get update && apt-get install -y libsoup-3.0
+
+# Install iptables and net-tools
+RUN apt-get update && apt-get install -y iptables net-tools && \
+    update-alternatives --set iptables /usr/sbin/iptables-legacy && \
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy 
+
+RUN apt-get update && apt-get install -y arptables ebtables
+
+RUN update-alternatives --install /usr/sbin/arptables arptables /usr/sbin/arptables-legacy 10 && \ 
+    update-alternatives --set arptables /usr/sbin/arptables-legacy 
+
+RUN update-alternatives --install /usr/sbin/ebtables ebtables /usr/sbin/ebtables-legacy 10 && \
+    update-alternatives --set ebtables /usr/sbin/ebtables-legacy
 
 # Add additional pytest packages 
 RUN apt-get update && apt-get install -y \
@@ -141,6 +155,9 @@ RUN echo "ESTB_INTERFACE=eth0" >> /etc/devic.properties
 RUN echo "PDRI_ENABLED=true" >> /etc/device.properties
 RUN echo "nameserver 8.8.8.8" >> /etc/resolv.dnsmasq
 RUN echo "Platform_Cotainer_1.0.0" >> /tmp/currently_running_image_name
+RUN echo "ETHERNET_INTERFACE=eth0" >> /etc/device.properties
+RUN echo "WIFI_INTERFACE=wlan0" >> /etc/device.properties
+RUN echo "MOCA_INTERFACE=eth0" >> /etc/device.properties
 
 # Custom expectation from RDK stack to have a timezone file in the stack
 RUN mkdir -p /opt/persistent
@@ -191,3 +208,4 @@ RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LI
 #CMD ["/bin/bash"]
 
 CMD ["/usr/local/bin/entrypoint.sh"]
+EXPOSE 9090

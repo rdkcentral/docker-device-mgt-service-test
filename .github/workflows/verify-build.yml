@@ -114,7 +114,7 @@ jobs:
 
       - name: Start native-platform service
         run: |
-          docker run -d --name native-platform --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
+          docker run -d --name native-platform -p 9090:9090 --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
 
       - name: Start Testing
         run: |
