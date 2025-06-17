@@ -113,7 +113,7 @@ jobs:
           docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50053:50053 -p 50054:50054 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/mockxconf:latest
 
       - name: Debug Running Processes
-        run: ss -tulnp | grep :22 && lsof -i :22 && which netstat && systemctl status ssh
+        run: systemctl status ssh
         
       - name: Start native-platform service
         run: |
