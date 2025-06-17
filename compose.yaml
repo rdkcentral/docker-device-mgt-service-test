@@ -15,13 +15,22 @@ services:
   l2-container:
     image: "ghcr.io/docker-device-mgt-service-test/native-platform:latest"
     container_name: "native-platform"
-    ports:
-      - "22:22"     
-      - "7070:7070"       
+    ports:   
       - "9090:9090"  
     depends_on:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     cap_add:
+      - NET_ADMIN
+  
+  nmap-container:
+    image: "ghcr.io/docker-device-mgt-service-test/native-platform:latest"
+    container_name: "nmap-platform"  
+    depends_on:
+      - mock-xconf
+    volumes:
+      - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    cap_add:
       - NET_ADMIN      
+      
