@@ -201,7 +201,6 @@ RUN chmod +x /lib/rdk/utils.sh
 COPY timestamp /bin/timestamp
 RUN chmod +x /bin/timestamp
 
-
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
