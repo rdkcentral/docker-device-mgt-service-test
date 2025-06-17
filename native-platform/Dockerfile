@@ -189,7 +189,6 @@ RUN chmod +x /usr/local/bin/deviceinfo_default.sh
 RUN sh /usr/local/bin/deviceinfo_default.sh
 RUN dos2unix /etc/data-model-generic.xml
 RUN dos2unix /etc/data-model-stb.xml
-CMD python3 -m http.server 9090 &  nc -l -k -p 7070 &
 
 COPY uploadSTBLogs.sh /lib/rdk/uploadSTBLogs.sh
 RUN chmod +x /lib/rdk/uploadSTBLogs.sh
@@ -209,6 +208,4 @@ RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LI
 #CMD ["/bin/bash"]
 
 CMD ["/usr/local/bin/entrypoint.sh"]
-EXPOSE 22
-EXPOSE 7070
 EXPOSE 9090
