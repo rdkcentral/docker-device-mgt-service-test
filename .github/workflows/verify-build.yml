@@ -115,7 +115,10 @@ jobs:
       - name: Start native-platform service
         run: |
           docker run -d --name native-platform -p 22:22 -p 7070:7070 -p 9090:9090 --link mockxconf -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest
-
+      
+      - name: Debug Running Processes
+        run: netstat -tulnp | grep :22  
+      
       - name: Start Testing
         run: |
           docker ps && docker ps -a
