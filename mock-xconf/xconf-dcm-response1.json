@@ -27,13 +27,31 @@
         "id": "9e9fce57-8053-423e-a647-a537ca8b7899",
         "telemetryProfile": [
             {
+                "header":"IUI_accum",
+                "content":"Device.DeviceInfo.X_RDKCENTRAL-COM.IUI.Version",
+                "type":"<message_bus>",
+                "pollingFrequency":"0"
+            },
+            {
                 "header": "SYS_GREP_TEST",
                 "content": "This is Test Log",
                 "type": "test.log",
                 "pollingFrequency": "0"
             },
             {
-                "header": "SYS_EVENT_TEST",
+                "header": "SYS_GREP_TEST_2",
+                "content": "This is Test Log",
+                "type": "test.log",
+                "pollingFrequency": "0"
+            },
+            {
+                "header": "SYS_TEST_ReportUpload",
+                "content": "uploading report",
+                "type": "core_log.txt",
+                "pollingFrequency": "0"
+            },
+            {
+                "header": "SYS_EVENT_TEST_accum",
                 "content": "generic",
                 "type": "<event>",
                 "pollingFrequency": "0"
@@ -42,7 +60,7 @@
         "schedule": "*/1 * * * *",
         "expires": 0,
         "telemetryProfile:name": "NEW TEST PROFILE",
-        "uploadRepository:URL": "https://mockxconf:50051/dataLakeMockXconf",
+        "uploadRepository:URL": "https://mock1xconf:50051/dataLakeMockXconf",
         "uploadRepository:uploadProtocol": "HTTP"
     }
 }
