@@ -38,6 +38,9 @@ function readJsonFile(count) {
   if(count == 0){
     var filePath = path.join('/etc/xconf', 'xconf-dcm-response.json');
   }
+  if(count == 2){
+    var filePath = path.join('/etc/xconf', 'xconf-dcm-response2.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-dcm-response1.json');
 
@@ -122,6 +125,9 @@ function requestHandler(req, res) {
     }
     else if (req.url.startsWith('/loguploader1/getT2DCMSettings')){
       return handleT2DCMSettings(req, res, queryObject,1); 
+    }
+    else if (req.url.startsWith('/loguploader2/getT2DCMSettings')){
+      return handleT2DCMSettings(req, res, queryObject,2); 
     }
 }
 else if (req.method === 'POST') {
