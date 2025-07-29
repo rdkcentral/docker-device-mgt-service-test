@@ -34,14 +34,14 @@
             },
             {
                 "header": "SYS_GREP_TEST",
-                "content": "This is Test Log",
-                "type": "test.log",
+                "content": "This log file is for previous logs",
+                "type": "session0.txt",
                 "pollingFrequency": "0"
             },
             {
                 "header": "SYS_GREP_TEST_2",
-                "content": "This is Test Log",
-                "type": "test.log",
+                "content": "This log file is for previous logs",
+                "type": "session0.txt",
                 "pollingFrequency": "0"
             },
             {
