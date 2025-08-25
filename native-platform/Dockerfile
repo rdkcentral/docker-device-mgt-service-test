@@ -122,6 +122,7 @@ RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2
 COPY tr69hostif /opt/tr69hostif
 RUN cd /opt/tr69hostif && sh cov_build.sh
 RUN rm -rf /opt/tr69hostif
+which tr69hostif
 
 # Install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
