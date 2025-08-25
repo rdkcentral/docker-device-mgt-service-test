@@ -54,6 +54,6 @@ rm -rf libSyscallWrapper
 rm -rf common_utilities
 rm -rf tr69hostif
 cd -
-
+which tr69hostif
 
 
