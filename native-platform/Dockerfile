@@ -122,6 +122,7 @@ RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2
 COPY tr69hostif /opt/tr69hostif
 RUN cd /opt/tr69hostif && sh cov_build.sh
 RUN rm -rf /opt/tr69hostif
+RUN which tr69hostif
 
 # Install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
@@ -209,3 +210,4 @@ RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LI
 
 CMD ["/usr/local/bin/entrypoint.sh"]
 EXPOSE 9090
+RUN which tr69hostif
