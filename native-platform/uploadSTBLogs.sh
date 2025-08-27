@@ -1,5 +1,17 @@
 #!/bin/sh
 
+#function for directing to logs to dcmd log file
+
+DCM_LOG_FILE=$LOG_PATH/dcmd.log.0
+uploadLog() {
+    echo "`/bin/timestamp` : $0: $*" >> $DCM_LOG_FILE
+}
+
+DCM_UPLOAD_LIST="$LOG_PATH/dcm_upload"
+DCM_LOG_PATH="/tmp/DCM"
+
+#input arguments
+
 TFTP_SERVER=$1
 FLAG=$2
 DCM_FLAG=$3
@@ -27,4 +39,10 @@ if [ "$RRD_FLAG" -eq 1 ]; then
         echo "Curl command failed with return code $?."
         exit 127
     fi
-fi
+else
+    echo "called /lib/rdk/uploadSTBLogs.sh with arguments flag $FLAG dcm flag $DCM_FLAG UploadOnReboot $UploadOnReboot Protocol $UploadProtocol Link $UploadHttpLink"
+
+
+exit 0
+
+
