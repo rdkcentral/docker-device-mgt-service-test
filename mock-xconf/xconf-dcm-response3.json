@@ -13,7 +13,7 @@
     "urn:settings:LogUploadSettings:UploadOnReboot": true,
     "urn:settings:LogUploadSettings:UploadImmediately": false,
     "urn:settings:LogUploadSettings:upload": true,
-    "urn:settings:LogUploadSettings:UploadSchedule:cron": "*/3 * * * *",
+    "urn:settings:LogUploadSettings:UploadSchedule:cron": "*/7 * * * *",
     "urn:settings:LogUploadSettings:UploadSchedule:levelone:cron": null,
     "urn:settings:LogUploadSettings:UploadSchedule:leveltwo:cron": null,
     "urn:settings:LogUploadSettings:UploadSchedule:levelthree:cron": null,
