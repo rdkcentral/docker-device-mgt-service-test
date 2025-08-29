@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 1
+#define NUMBER_OF_DATA_ELEMENTS 2
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -66,7 +66,8 @@ char dataElementValues[NUMBER_OF_DATA_ELEMENTS][256];
 bool rdkRemoteDebuggerIssueType = false;
 
 char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
-    "false"
+    "false",
+    "root"
 };
 
 void init_dataElementValues()
@@ -80,7 +81,8 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
+    "Device.X_RDK_WebConfig.ForceSync"
 };
 
 
@@ -92,21 +94,26 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
         dataElementNames[0], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[1], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
     }
 };
 
 
- 
+
 
 /**
  * @brief Signal handler function for handling the exit signal.
- * 
+ *
  * This function is called when the program receives an exit signal. It performs the following tasks:
  * - Unregisters data elements from two handles (handle1) using the rbus_unregDataElements function.
  * - Closes handle1 using the rbus_close function.
  * - Prints a message indicating that the provider is exiting.
  * - Calls the exit function to terminate the program.
- * 
+ *
  * @param sig The signal number.
  */
 void exitHandler(int sig)
@@ -118,7 +125,7 @@ void exitHandler(int sig)
     {
         printf("provider: rbus_unregDataElements for handle1 err: %d\n", rc1);
     }
-   
+
     rc1 = rbus_close(handle1);
     if (rc1 != RBUS_ERROR_INVALID_HANDLE)
     {
@@ -147,9 +154,9 @@ int main(int argc, char* argv[])
         printf("provider: First rbus_open for handle1 err: %d\n", rc1);
         goto exit1;
     }
-  
+
     rc1 = rbus_regDataElements(handle1, NUMBER_OF_DATA_ELEMENTS, dataElements);
-  
+
     // Add exit handler to catch signals and close rbus handles
     signal(SIGINT, exitHandler);
     signal(SIGTERM, exitHandler);
@@ -219,7 +226,7 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
                 printf("Cant Handle [%s]\n", name);
                 return RBUS_ERROR_INVALID_INPUT;
             }
-            break;            
+            break;
         }
     }
 
@@ -245,7 +252,7 @@ rbusError_t multiRbusProvider_SampleDataGetHandler(rbusHandle_t handle, rbusProp
             rbusValue_SetString(value, dataElementValues[i]);
             break;
         }
-    }   
+    }
 
     rbusProperty_SetValue(property, value);
     rbusValue_Release(value);
