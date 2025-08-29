@@ -38,6 +38,9 @@ RUN mkdir -p /etc/xconf/
 COPY xconf-dcm-response.json /etc/xconf/xconf-dcm-response.json
 COPY xconf-dcm-response1.json /etc/xconf/xconf-dcm-response1.json
 COPY xconf-dcm-response2.json /etc/xconf/xconf-dcm-response2.json
+COPY xconf-dcm-response3.json /etc/xconf/xconf-dcm-response3.json
+COPY xconf-dcm-response4.json /etc/xconf/xconf-dcm-response4.json
+COPY xconf-dcm-response5.json /etc/xconf/xconf-dcm-response5.json
 COPY xconf-cdl-response.json /etc/xconf/xconf-cdl-response.json
 COPY xconf-cdl-invalid-response.json /etc/xconf/xconf-cdl-invalid-response.json
 COPY xconf-cdl-invalidpci-response.json /etc/xconf/xconf-cdl-invalidpci-response.json

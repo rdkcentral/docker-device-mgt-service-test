@@ -22,7 +22,8 @@ RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-d
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
 
 RUN apt-get update && apt-get install -y libjsonrpccpp-dev
-
+# Add busybox support
+RUN apt-get update && apt-get install -y busybox 
 # Add libsoup-3.0 support
 RUN apt-get update && apt-get install -y libsoup-3.0
 
