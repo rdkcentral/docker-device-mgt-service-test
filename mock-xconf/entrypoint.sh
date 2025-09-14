@@ -34,9 +34,14 @@ echo "Generating server certificates for MockXconf using generate_test_rdk_certs
 # Generate server certificates
 /etc/pki/scripts/generate_test_rdk_certs.sh --type server
 
+# Define certificate paths based on generate_test_rdk_certs.sh structure
+ROOT_CA_NAME="Test-RDK-root"
+CERT_NAME="test-rdk-server-cert"
+ICA_NAME="Test-RDK-server-ICA"
+
 # Copy the server certificates to the xconf certs directory
-cp /etc/pki/certs/server/server.key.pem /etc/xconf/certs/mock-xconf-server-key.pem
-cp /etc/pki/certs/server/server.cert.pem /etc/xconf/certs/mock-xconf-server-cert.pem
+cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key /etc/xconf/certs/mock-xconf-server-key.pem
+cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem /etc/xconf/certs/mock-xconf-server-cert.pem
 
 echo "Server certificates generated and copied to /etc/xconf/certs"
 
@@ -44,8 +49,8 @@ echo "Server certificates generated and copied to /etc/xconf/certs"
 mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server
 
 # Copy only the CA certificates (not the leaf cert) to the shared directory for native-platform to use
-cp /etc/pki/certs/server/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
-cp /etc/pki/certs/server/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
+cp /etc/pki/${ROOT_CA_NAME}/certs/${ROOT_CA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem
+cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${ICA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem
 
 echo "Server CA certificates copied to shared volume for native-platform"
 

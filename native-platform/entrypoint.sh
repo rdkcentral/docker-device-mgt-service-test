@@ -63,13 +63,17 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     mkdir -p /etc/pki/server-trust
 
     # Copy client certificates to /opt/certs directory
-    cp /etc/pki/certs/client/client.key.pem /opt/certs/
-    cp /etc/pki/certs/client/client.cert.pem /opt/certs/
-    cp /etc/pki/certs/client/client.p12 /opt/certs/
+    # The correct paths based on generate_test_rdk_certs.sh structure
+    ROOT_CA_NAME="Test-RDK-root"
+    CERT_NAME="test-rdk-client-cert"
+    ICA_NAME="Test-RDK-client-ICA"
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key /opt/certs/client.key.pem
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem /opt/certs/client.cert.pem
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.p12 /opt/certs/client.p12
 
     # Copy client CA certificates to shared volume for mock-xconf container
-    cp /etc/pki/certs/client/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/
-    cp /etc/pki/certs/client/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/
+    cp /etc/pki/${ROOT_CA_NAME}/certs/${ROOT_CA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${ICA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem
 
     echo "Client certificates generated and copied to /opt/certs"
     echo "Client CA certificates copied to shared volume for mock-xconf"
