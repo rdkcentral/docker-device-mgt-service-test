@@ -21,6 +21,57 @@
 
 #set -m
 
+# Enable mTLS if specified via environment variable (default: disabled)
+ENABLE_MTLS=${ENABLE_MTLS:-false}
+export ENABLE_MTLS
+
+# Log mTLS status
+echo "Starting with mTLS: $ENABLE_MTLS"
+
+# Generate self-signed certificates for MockXconf at container startup
+echo "Generating server certificates for MockXconf using generate_test_rdk_certs.sh..."
+
+# Generate server certificates
+/etc/pki/scripts/generate_test_rdk_certs.sh --type server
+
+# Copy the server certificates to the xconf certs directory
+cp /etc/pki/certs/server/server.key.pem /etc/xconf/certs/mock-xconf-server-key.pem
+cp /etc/pki/certs/server/server.cert.pem /etc/xconf/certs/mock-xconf-server-cert.pem
+
+echo "Server certificates generated and copied to /etc/xconf/certs"
+
+# If mTLS is enabled at startup, prepare certificates and wait for client certificates
+if [ "$ENABLE_MTLS" = "true" ]; then
+    echo "mTLS enabled - preparing server certificates for sharing..."
+
+    # Create shared certificate directory
+    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server
+
+    # Copy the server CA certificates to the shared certificate directory for native-platform to use
+    cp /etc/pki/certs/server/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
+    cp /etc/pki/certs/server/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
+
+    echo "Server CA certificates copied to shared volume for native-platform"
+    echo "mTLS enabled - waiting for client certificates..."
+
+    # Wait for client certificates
+    while [ ! -f "/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem" ] || [ ! -f "/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem" ]; do
+        sleep 1
+        echo "Waiting for client certificates..."
+    done
+
+    echo "Client certificates found - importing to trust store"
+
+    # Import client CA certificates to trust store
+    mkdir -p /etc/xconf/trust-store
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem /etc/xconf/trust-store/
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem /etc/xconf/trust-store/
+    c_rehash /etc/xconf/trust-store/
+
+    echo "Client CA certificates imported to trust store"
+    echo "mTLS certificate trust flow established"
+fi
+
 node /usr/local/bin/data-lake-mock.js &
 
 #httpd-foreground

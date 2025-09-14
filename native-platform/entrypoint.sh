@@ -24,6 +24,57 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
+# Enable mTLS if specified via environment variable (default: disabled)
+ENABLE_MTLS=${ENABLE_MTLS:-false}
+export ENABLE_MTLS
+
+# Log mTLS status
+echo "Starting with mTLS: $ENABLE_MTLS"
+
+# Always create the basic directory for application certificates
+mkdir -p /opt/certs
+
+if [ "$ENABLE_MTLS" = "true" ]; then
+    echo "mTLS enabled - performing certificate operations"
+
+    # Generate certificates for PKI testing
+    echo "Generating client certificates..."
+    /usr/local/share/cert-scripts/generate_test_rdk_certs.sh --type client
+
+    # Create certificate directories for mTLS
+    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client
+    mkdir -p /etc/pki/server-trust
+
+    # Copy client certificates to /opt/certs directory
+    cp /etc/pki/certs/client/client.key.pem /opt/certs/
+    cp /etc/pki/certs/client/client.cert.pem /opt/certs/
+    cp /etc/pki/certs/client/client.p12 /opt/certs/
+
+    # Copy client CA certificates to shared volume for mock-xconf container
+    cp /etc/pki/certs/client/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/
+    cp /etc/pki/certs/client/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/
+
+    echo "Client certificates generated and copied to /opt/certs"
+    echo "Client CA certificates copied to shared volume for mock-xconf"
+
+    # Wait for server certificates to be available (added by mock-xconf container)
+    echo "Waiting for server certificates from mock-xconf container..."
+    while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem ] || [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem ]; do
+      sleep 1
+      echo "Waiting for server certificates..."
+    done
+
+    # Import server CA certificates to trust store
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /etc/pki/server-trust/
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /etc/pki/server-trust/
+    c_rehash /etc/pki/server-trust/
+
+    echo "Server CA certificates imported to trust store"
+    echo "mTLS certificate trust flow established"
+else
+    echo "mTLS disabled - skipping certificate operations"
+fi
+
 # Build and install RFC parameter provider and tr69hostif
 
 rt_pid=`pidof rtrouted`
