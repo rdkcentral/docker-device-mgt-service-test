@@ -79,10 +79,7 @@ RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
     mkdir -p /etc/ssl/certsel && cp CertSelector/conf/certsel.cfg /etc/ssl/certsel/certsel.cfg && \
     cd .. && rm -rf /opt/rdk-cert-config
 
-COPY ./mock-xconf-server-cert.pem /usr/share/ca-certificates/mock-xconf-server-cert.pem
-RUN chmod 644 /usr/share/ca-certificates/mock-xconf-server-cert.pem
-RUN echo "mock-xconf-server-cert.pem" >> /etc/ca-certificates.conf
-RUN update-ca-certificates --fresh
+# Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
 
 # Build and install test binary that acts as a provider for all mandatory RFC parameters
 RUN mkdir -p /opt 

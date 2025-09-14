@@ -40,18 +40,17 @@ cp /etc/pki/certs/server/server.cert.pem /etc/xconf/certs/mock-xconf-server-cert
 
 echo "Server certificates generated and copied to /etc/xconf/certs"
 
-# If mTLS is enabled at startup, prepare certificates and wait for client certificates
+# Always create shared certificate directory and share CA certificates
+mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server
+
+# Copy only the CA certificates (not the leaf cert) to the shared directory for native-platform to use
+cp /etc/pki/certs/server/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
+cp /etc/pki/certs/server/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
+
+echo "Server CA certificates copied to shared volume for native-platform"
+
+# If mTLS is enabled at startup, wait for client certificates
 if [ "$ENABLE_MTLS" = "true" ]; then
-    echo "mTLS enabled - preparing server certificates for sharing..."
-
-    # Create shared certificate directory
-    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server
-
-    # Copy the server CA certificates to the shared certificate directory for native-platform to use
-    cp /etc/pki/certs/server/root-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
-    cp /etc/pki/certs/server/intermediate-ca.cert.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/
-
-    echo "Server CA certificates copied to shared volume for native-platform"
     echo "mTLS enabled - waiting for client certificates..."
 
     # Wait for client certificates

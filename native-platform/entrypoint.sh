@@ -34,6 +34,23 @@ echo "Starting with mTLS: $ENABLE_MTLS"
 # Always create the basic directory for application certificates
 mkdir -p /opt/certs
 
+# Wait for the mock-xconf CA certificates to be available
+echo "Waiting for mock-xconf CA certificates..."
+while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem ] || [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem ]; do
+  sleep 1
+  echo "Waiting for CA certificates..."
+done
+
+# Install mock-xconf CA certificates to the system trust store
+echo "Installing mock-xconf CA certificates to the system trust store..."
+cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /usr/share/ca-certificates/mock-xconf-root-ca.pem
+cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /usr/share/ca-certificates/mock-xconf-intermediate-ca.pem
+chmod 644 /usr/share/ca-certificates/mock-xconf-root-ca.pem
+chmod 644 /usr/share/ca-certificates/mock-xconf-intermediate-ca.pem
+echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
+echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
+update-ca-certificates --fresh
+
 if [ "$ENABLE_MTLS" = "true" ]; then
     echo "mTLS enabled - performing certificate operations"
 
