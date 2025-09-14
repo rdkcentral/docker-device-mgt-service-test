@@ -68,8 +68,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Import client CA certificates to trust store
     mkdir -p /etc/xconf/trust-store
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem /etc/xconf/trust-store/
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem /etc/xconf/trust-store/
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem /etc/xconf/trust-store/root-ca.pem
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem /etc/xconf/trust-store/intermediate-ca.pem
     c_rehash /etc/xconf/trust-store/
 
     echo "Client CA certificates imported to trust store"

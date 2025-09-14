@@ -86,8 +86,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     done
 
     # Import server CA certificates to trust store
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /etc/pki/server-trust/
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /etc/pki/server-trust/
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /etc/pki/server-trust/root-ca.pem
+    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /etc/pki/server-trust/intermediate-ca.pem
     c_rehash /etc/pki/server-trust/
 
     echo "Server CA certificates imported to trust store"
