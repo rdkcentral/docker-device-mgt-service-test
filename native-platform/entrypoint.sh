@@ -67,9 +67,15 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     ROOT_CA_NAME="Test-RDK-root"
     CERT_NAME="test-rdk-client-cert"
     ICA_NAME="Test-RDK-client-ICA"
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key /opt/certs/client.key.pem
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem /opt/certs/client.cert.pem
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.p12 /opt/certs/client.p12
+
+    # Default cert paths in container
+    DEFAULT_P12="/opt/certs/client.p12"
+    DEFAULT_PEM="/opt/certs/client.pem"
+
+    # Create combined PEM file with both cert and key
+    cat /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem > $DEFAULT_PEM
+    cat /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key >> $DEFAULT_PEM
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.p12 $DEFAULT_P12
 
     # Copy client CA certificates to shared volume for mock-xconf container
     cp /etc/pki/${ROOT_CA_NAME}/certs/${ROOT_CA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem
@@ -77,6 +83,15 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "Client certificates generated and copied to /opt/certs"
     echo "Client CA certificates copied to shared volume for mock-xconf"
+
+    # Create CertSelector config file
+    echo "Creating CertSelector configuration file..."
+    mkdir -p /etc/ssl/certsel
+
+    # Create a simple certsel.cfg file directly
+    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    echo "MTLS_PEM,OPERFS_PEM,PEM,file:///${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    echo "CertSelector configuration file created at /etc/ssl/certsel/certsel.cfg"
 
     # Wait for server certificates to be available (added by mock-xconf container)
     echo "Waiting for server certificates from mock-xconf container..."
