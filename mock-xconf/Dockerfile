@@ -11,7 +11,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # RUN mkdir -p /usr/local/apache2/htdocs/loguploader
 # COPY xconf-dcm-response.json /usr/local/apache2/htdocs/loguploader/getT2DCMSettings
 
-RUN apt-get update && apt-get install -y vim curl wget nodejs npm openssl git ca-certificates
+RUN apt-get update && apt-get install -y vim curl wget nodejs npm openssl
 
 # Clone and manually install certificate scripts
 WORKDIR /opt
@@ -63,6 +63,8 @@ COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+
+COPY server-utils.js /usr/local/bin/server-utils.js
 
 COPY data-lake-mock.js /usr/local/bin/data-lake-mock.js
 RUN chmod +x /usr/local/bin/data-lake-mock.js

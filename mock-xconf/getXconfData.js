@@ -21,28 +21,17 @@ const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
-
-// Check if mTLS is enabled
-const mtlsEnabled = process.env.ENABLE_MTLS === 'true';
+const { applyMtlsConfig } = require('./server-utils');
 
 // HTTPS options with base configuration
-const httpsOptions = {
+const options = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
   port: 50052
 };
 
-// Add mTLS settings if enabled
-if (mtlsEnabled && fs.existsSync('/etc/xconf/trust-store/root-ca.cert.pem') &&
-  fs.existsSync('/etc/xconf/trust-store/intermediate-ca.cert.pem')) {
-  httpsOptions.ca = [
-    fs.readFileSync('/etc/xconf/trust-store/root-ca.cert.pem'),
-    fs.readFileSync('/etc/xconf/trust-store/intermediate-ca.cert.pem')
-  ];
-  httpsOptions.requestCert = true;
-  httpsOptions.rejectUnauthorized = true;
-  console.log('mTLS configuration loaded successfully');
-}
+// Apply mTLS settings if enabled 
+applyMtlsConfig(options);
 
 let save_request = false;
 let savedrequest_json={};
@@ -181,29 +170,10 @@ function requestHandler(req, res) {
   res.end("Server is Up Please check the request....");
 }
 
-// Add endpoint for mTLS status
-function requestHandlerWithMtlsStatus(req, res) {
-  const parsedUrl = url.parse(req.url, true);
-
-  if (req.method === 'GET' && parsedUrl.pathname === '/mtls/status') {
-    // Endpoint to report mTLS status
-    res.writeHead(200, {'Content-Type': 'application/json'});
-    const statusData = {
-      mtlsEnabled: mtlsEnabled,
-      certificatesLoaded: mtlsEnabled && httpsOptions.ca ? true : false
-    };
-    res.end(JSON.stringify(statusData));
-    return;
-  }
-
-  // Use existing request handler for other requests
-  requestHandler(req, res);
-}
-
 // Create HTTPS server
-const server = https.createServer(httpsOptions, requestHandlerWithMtlsStatus);
+const server = https.createServer(options, requestHandler);
 
 // Start the server
-server.listen(httpsOptions.port, () => {
-  console.log(`XCONF Mock Server running at https://localhost:${httpsOptions.port}/ with mTLS ${mtlsEnabled ? 'enabled' : 'disabled'}`);
+server.listen(options.port, () => {
+  console.log(`XCONF Mock Server running at https://localhost:${options.port}/`);
 });

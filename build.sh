@@ -23,7 +23,7 @@ REPOSITORY_NAME="docker-device-mgt-service-test"
 
 # Build container that provides mock xconf service
 cd mock-xconf
-docker build -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest -f Dockerfile .
+docker build --no-cache -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest -f Dockerfile .
 cd -
 
 

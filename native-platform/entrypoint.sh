@@ -31,22 +31,25 @@ export ENABLE_MTLS
 # Log mTLS status
 echo "Starting with mTLS: $ENABLE_MTLS"
 
-# Always create the basic directory for application certificates
-mkdir -p /opt/certs
+# System CA trust store location
+SYSTEM_TRUST_STORE="/usr/share/ca-certificates"
+mkdir -p ${SYSTEM_TRUST_STORE}
 
-# Wait for the mock-xconf CA certificates to be available
-echo "Waiting for mock-xconf CA certificates..."
-while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem ] || [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem ]; do
+
+# Wait for the root CA and intermediate CA to be available
+echo "Waiting for server root CA and intermediate CA..."
+while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ] || \
+      [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ]; do
   sleep 1
-  echo "Waiting for CA certificates..."
+  echo "Waiting for server certificates..."
 done
 
-# Install mock-xconf CA certificates to the system trust store
-echo "Installing mock-xconf CA certificates to the system trust store..."
-cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /usr/share/ca-certificates/mock-xconf-root-ca.pem
-cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /usr/share/ca-certificates/mock-xconf-intermediate-ca.pem
-chmod 644 /usr/share/ca-certificates/mock-xconf-root-ca.pem
-chmod 644 /usr/share/ca-certificates/mock-xconf-intermediate-ca.pem
+# Copy individual server CA certificates to system trust store
+cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
+cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
+
+# Update CA certificates
 echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
 echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
 update-ca-certificates --fresh
@@ -56,17 +59,16 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Generate certificates for PKI testing
     echo "Generating client certificates..."
-    /usr/local/share/cert-scripts/generate_test_rdk_certs.sh --type client
+    /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
 
     # Create certificate directories for mTLS
     mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client
-    mkdir -p /etc/pki/server-trust
+    mkdir -p /opt/certs
 
     # Copy client certificates to /opt/certs directory
-    # The correct paths based on generate_test_rdk_certs.sh structure
     ROOT_CA_NAME="Test-RDK-root"
-    CERT_NAME="test-rdk-client-cert"
     ICA_NAME="Test-RDK-client-ICA"
+    CERT_NAME="rdkclient"
 
     # Default cert paths in container
     DEFAULT_P12="/opt/certs/client.p12"
@@ -77,35 +79,32 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     cat /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key >> $DEFAULT_PEM
     cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.p12 $DEFAULT_P12
 
-    # Copy client CA certificates to shared volume for mock-xconf container
-    cp /etc/pki/${ROOT_CA_NAME}/certs/${ROOT_CA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/root-ca.cert.pem
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${ICA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/intermediate-ca.cert.pem
+    # Copy client CA chain to shared volume for mock-xconf container
+    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client
+    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/${ICA_NAME}_chain.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem
 
     echo "Client certificates generated and copied to /opt/certs"
-    echo "Client CA certificates copied to shared volume for mock-xconf"
+    echo "Client CA chain copied to shared volume for mock-xconf"
 
-    # Create CertSelector config file
+    # Create CertSelector configuration file
     echo "Creating CertSelector configuration file..."
     mkdir -p /etc/ssl/certsel
 
     # Create a simple certsel.cfg file directly
-    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
     echo "MTLS_PEM,OPERFS_PEM,PEM,file:///${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
     echo "CertSelector configuration file created at /etc/ssl/certsel/certsel.cfg"
 
-    # Wait for server certificates to be available (added by mock-xconf container)
+    # Wait for server root CA and intermediate CA to be available (added by mock-xconf container)
     echo "Waiting for server certificates from mock-xconf container..."
-    while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem ] || [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem ]; do
+    while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ] || \
+          [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ]; do
       sleep 1
       echo "Waiting for server certificates..."
     done
 
-    # Import server CA certificates to trust store
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root-ca.cert.pem /etc/pki/server-trust/root-ca.pem
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate-ca.cert.pem /etc/pki/server-trust/intermediate-ca.pem
-    c_rehash /etc/pki/server-trust/
-
-    echo "Server CA certificates imported to trust store"
+    # No additional imports needed for mTLS since we already copied the certificates to the system trust store
+    echo "Server certificates are already imported to system trust store"
     echo "mTLS certificate trust flow established"
 else
     echo "mTLS disabled - skipping certificate operations"
