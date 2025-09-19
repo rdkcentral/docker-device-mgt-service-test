@@ -91,20 +91,10 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     mkdir -p /etc/ssl/certsel
 
     # Create a simple certsel.cfg file directly
-    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
-    echo "MTLS_PEM,OPERFS_PEM,PEM,file:///${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    echo "MTLS,OPERFS_PEM,PEM,file:///${DEFAULT_PEM},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
+    #echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
     echo "CertSelector configuration file created at /etc/ssl/certsel/certsel.cfg"
 
-    # Wait for server root CA and intermediate CA to be available (added by mock-xconf container)
-    echo "Waiting for server certificates from mock-xconf container..."
-    while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ] || \
-          [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ]; do
-      sleep 1
-      echo "Waiting for server certificates..."
-    done
-
-    # No additional imports needed for mTLS since we already copied the certificates to the system trust store
-    echo "Server certificates are already imported to system trust store"
     echo "mTLS certificate trust flow established"
 else
     echo "mTLS disabled - skipping certificate operations"
