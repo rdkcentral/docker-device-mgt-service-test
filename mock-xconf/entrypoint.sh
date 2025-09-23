@@ -65,11 +65,10 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "Client certificate chain found - importing to trust store"
 
-    # Import client CA chain to trust store
+    # Import client CA chain to trust store and clean it up from shared volume
     mkdir -p /etc/xconf/trust-store
     cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem /etc/xconf/trust-store/ca-chain.pem
-    # No rehash needed on the server side as specified in requirements
-
+    rm -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem
     echo "Client CA chain imported to trust store"
     echo "mTLS certificate trust flow established"
 fi

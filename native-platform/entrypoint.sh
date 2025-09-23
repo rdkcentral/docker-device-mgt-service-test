@@ -49,6 +49,10 @@ cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ${SYSTEM_TRUS
 cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
 chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
 
+# Cleanup shared server certs after import
+rm -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem \
+      /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem
+
 # Update CA certificates
 echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
 echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
@@ -89,11 +93,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     # Create CertSelector configuration file
     echo "Creating CertSelector configuration file..."
     mkdir -p /etc/ssl/certsel
-
-    # Create a simple certsel.cfg file directly
-    echo "MTLS,OPERFS_PEM,PEM,file:///${DEFAULT_PEM},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
-    #echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file:///${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
-    echo "CertSelector configuration file created at /etc/ssl/certsel/certsel.cfg"
+    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file://${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
+    echo "MTLS_PEM,OPERFS_PEM,PEM,file://${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
 
     echo "mTLS certificate trust flow established"
 else

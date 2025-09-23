@@ -76,7 +76,6 @@ RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
-    mkdir -p /etc/ssl/certsel && cp CertSelector/conf/certsel.cfg /etc/ssl/certsel/certsel.cfg && \
     cd .. && rm -rf /opt/rdk-cert-config
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
