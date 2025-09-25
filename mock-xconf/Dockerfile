@@ -62,6 +62,8 @@ COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY ./certs.sh /usr/local/bin/certs.sh
+RUN chmod +x /usr/local/bin/certs.sh
 
 COPY server-utils.js /usr/local/bin/server-utils.js
 

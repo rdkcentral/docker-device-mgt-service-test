@@ -21,56 +21,15 @@
 
 #set -m
 
-# Enable mTLS if specified via environment variable (default: disabled)
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 
-# Log mTLS status
-echo "Starting with mTLS: $ENABLE_MTLS"
-
-# Generate self-signed certificates for MockXconf at container startup
-echo "Generating server certificates for MockXconf using generate_test_rdk_certs.sh..."
-
-# Generate server certificates with mockxconf as CN
-/etc/pki/scripts/generate_test_rdk_certs.sh --type server --cn "mockxconf"
-
-# Define certificate paths based on generate_test_rdk_certs.sh structure
-ROOT_CA_NAME="Test-RDK-root"
-ICA_NAME="Test-RDK-server-ICA"
-CERT_NAME="mockxconf"
-
-# Copy the server certificates to the xconf certs directory
-cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key /etc/xconf/certs/mock-xconf-server-key.pem
-cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem /etc/xconf/certs/mock-xconf-server-cert.pem
-
-echo "Server certificates generated and copied to /etc/xconf/certs"
-
-# Always create shared certificate directory and share individual CA certificates
-mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server
-
-# Copy individual certificates to shared directory for native-platform to use
-cp /etc/pki/${ROOT_CA_NAME}/certs/${ROOT_CA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem
-cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${ICA_NAME}.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem
-echo "Server root and intermediate CA certificates copied to shared volume for native-platform"
-
-# If mTLS is enabled at startup, wait for client certificates
-if [ "$ENABLE_MTLS" = "true" ]; then
-    echo "mTLS enabled - waiting for client certificates..."
-
-    # Wait for client certificate chain
-    while [ ! -f "/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem" ]; do
-        sleep 1
-        echo "Waiting for client certificates..."
-    done
-
-    echo "Client certificate chain found - importing to trust store"
-
-    # Import client CA chain to trust store and clean it up from shared volume
-    mkdir -p /etc/xconf/trust-store
-    cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem /etc/xconf/trust-store/ca-chain.pem
-    rm -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem
-    echo "Client CA chain imported to trust store"
-    echo "mTLS certificate trust flow established"
+## Certificate setup
+/usr/local/bin/certs.sh
+CERTS_RC=$?
+if [ "$CERTS_RC" -ne 0 ]; then
+	echo "[entrypoint] Certificate setup failed with exit code $CERTS_RC; aborting startup."
+	exit "$CERTS_RC"
 fi
 
 node /usr/local/bin/data-lake-mock.js &

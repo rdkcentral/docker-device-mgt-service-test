@@ -24,81 +24,15 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
-# Enable mTLS if specified via environment variable (default: disabled)
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 
-# Log mTLS status
-echo "Starting with mTLS: $ENABLE_MTLS"
-
-# System CA trust store location
-SYSTEM_TRUST_STORE="/usr/share/ca-certificates"
-mkdir -p ${SYSTEM_TRUST_STORE}
-
-
-# Wait for the root CA and intermediate CA to be available
-echo "Waiting for server root CA and intermediate CA..."
-while [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ] || \
-      [ ! -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ]; do
-  sleep 1
-  echo "Waiting for server certificates..."
-done
-
-# Copy individual server CA certificates to system trust store
-cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
-cp /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
-
-# Cleanup shared server certs after import
-rm -f /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/root_ca.pem \
-      /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/server/intermediate_ca.pem
-
-# Update CA certificates
-echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
-echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
-update-ca-certificates --fresh
-
-if [ "$ENABLE_MTLS" = "true" ]; then
-    echo "mTLS enabled - performing certificate operations"
-
-    # Generate certificates for PKI testing
-    echo "Generating client certificates..."
-    /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
-
-    # Create certificate directories for mTLS
-    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client
-    mkdir -p /opt/certs
-
-    # Copy client certificates to /opt/certs directory
-    ROOT_CA_NAME="Test-RDK-root"
-    ICA_NAME="Test-RDK-client-ICA"
-    CERT_NAME="rdkclient"
-
-    # Default cert paths in container
-    DEFAULT_P12="/opt/certs/client.p12"
-    DEFAULT_PEM="/opt/certs/client.pem"
-
-    # Create combined PEM file with both cert and key
-    cat /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.pem > $DEFAULT_PEM
-    cat /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/${CERT_NAME}.key >> $DEFAULT_PEM
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/${CERT_NAME}.p12 $DEFAULT_P12
-
-    # Copy client CA chain to shared volume for mock-xconf container
-    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client
-    cp /etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/${ICA_NAME}_chain.pem /mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs/client/ca-chain.pem
-
-    echo "Client certificates generated and copied to /opt/certs"
-    echo "Client CA chain copied to shared volume for mock-xconf"
-
-    # Create CertSelector configuration file
-    echo "Creating CertSelector configuration file..."
-    mkdir -p /etc/ssl/certsel
-    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file://${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
-    echo "MTLS_PEM,OPERFS_PEM,PEM,file://${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
-
-    echo "mTLS certificate trust flow established"
-else
-    echo "mTLS disabled - skipping certificate operations"
+## Certificate setup
+/usr/local/bin/certs.sh
+CERTS_RC=$?
+if [ "$CERTS_RC" -ne 0 ]; then
+    echo "[entrypoint] Certificate setup failed with exit code $CERTS_RC; aborting startup."
+    exit "$CERTS_RC"
 fi
 
 # Build and install RFC parameter provider and tr69hostif

@@ -208,6 +208,8 @@ RUN chmod +x /bin/timestamp
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY certs.sh /usr/local/bin/certs.sh
+RUN chmod +x /usr/local/bin/certs.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 
