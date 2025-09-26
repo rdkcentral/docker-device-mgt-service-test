@@ -18,7 +18,7 @@
 # limitations under the License.
 ##########################################################################
 
-REGISTRY_ROOT="ghcr.io"
+REGISTRY_ROOT="ghcr.io/rdkcentral"
 REPOSITORY_NAME="docker-device-mgt-service-test"
 
 # Build container that provides mock xconf service

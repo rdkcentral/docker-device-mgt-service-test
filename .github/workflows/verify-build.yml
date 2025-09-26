@@ -69,7 +69,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/tr69hostif'
-          ref: '1.1.7'
+          ref: '1.2.3'
           path: 'device-management-service/native-platform/tr69hostif'
 
       - name: Set up Python

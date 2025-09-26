@@ -38,9 +38,20 @@ function readJsonFile(count) {
   if(count == 0){
     var filePath = path.join('/etc/xconf', 'xconf-dcm-response.json');
   }
+  else if(count == 2){
+    var filePath = path.join('/etc/xconf', 'xconf-dcm-response2.json');
+  }
+  else if(count == 3){
+    var filePath = path.join('/etc/xconf', 'xconf-dcm-response3.json');
+  }
+  else if(count == 4){
+    var filePath = path.join('/etc/xconf', 'xconf-dcm-response4.json');
+  }
+  else if(count == 5){
+    var filePath = path.join('/etc/xconf', 'xconf-dcm-response5.json');
+  }
   else{
     var filePath = path.join('/etc/xconf', 'xconf-dcm-response1.json');
-
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
@@ -122,6 +133,18 @@ function requestHandler(req, res) {
     }
     else if (req.url.startsWith('/loguploader1/getT2DCMSettings')){
       return handleT2DCMSettings(req, res, queryObject,1); 
+    }
+    else if (req.url.startsWith('/loguploader2/getT2DCMSettings')){
+      return handleT2DCMSettings(req, res, queryObject,2); 
+    }
+    else if (req.url.startsWith('/loguploader3/getT2DCMSettings')){
+      return handleT2DCMSettings(req, res, queryObject,3);
+    }
+    else if (req.url.startsWith('/loguploader4/getT2DCMSettings')){                                                                   
+      return handleT2DCMSettings(req, res, queryObject,4);                                                                            
+    }
+    else if (req.url.startsWith('/loguploader5/getT2DCMSettings')){                                                                   
+      return handleT2DCMSettings(req, res, queryObject,5);                                                                            
     }
 }
 else if (req.method === 'POST') {
