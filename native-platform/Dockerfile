@@ -1,4 +1,5 @@
 FROM ubuntu:jammy
+
 ARG DEBIAN_FRONTEND=noninteractive
 # Get the revision number from the build environment
 # This must be a release tag derived from a github relase event context
@@ -14,7 +15,7 @@ RUN apt-get install -y libtool autotools-dev automake zlib1g-dev ninja-build mes
 
 RUN apt-get install -y libglib2.0-dev libcurl4-openssl-dev \
           libmsgpack-dev libsystemd-dev libssl-dev libcjson-dev python3-pip libsqlite3-dev
-          
+
 RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-dev \
           libboost-all-dev libwebsocketpp-dev libcunit1 libcunit1-dev libunwind-dev libnanomsg-dev \
           iproute2 nmap netcat
@@ -46,7 +47,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update && apt-get install -y \
     python3-pytest-bdd
-    
+
 RUN pip3 install requests pytest-ordering pytest-json-report pytest-html msgpack
 
 # Install CMake
@@ -70,10 +71,14 @@ RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
     ninja -C build && ninja -C build install
 RUN rm -rf /opt/trower-base64
 
-COPY ./mock-xconf-server-cert.pem /usr/share/ca-certificates/mock-xconf-server-cert.pem
-RUN chmod 644 /usr/share/ca-certificates/mock-xconf-server-cert.pem
-RUN echo "mock-xconf-server-cert.pem" >> /etc/ca-certificates.conf
-RUN update-ca-certificates --fresh
+#Install RDK cert selector libraries
+RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
+    cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
+    make && make install && \
+    cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
+    cd .. && rm -rf /opt/rdk-cert-config
+
+# Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
 
 # Build and install test binary that acts as a provider for all mandatory RFC parameters
 RUN mkdir -p /opt 
@@ -187,6 +192,7 @@ RUN touch /opt/secure/RFC/bootstrap.journal
 
 COPY deviceinfo_default.sh /usr/local/bin/deviceinfo_default.sh
 RUN chmod +x /usr/local/bin/deviceinfo_default.sh
+
 RUN sh /usr/local/bin/deviceinfo_default.sh
 RUN dos2unix /etc/data-model-generic.xml
 RUN dos2unix /etc/data-model-stb.xml
@@ -202,6 +208,8 @@ RUN chmod +x /bin/timestamp
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY certs.sh /usr/local/bin/certs.sh
+RUN chmod +x /usr/local/bin/certs.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 

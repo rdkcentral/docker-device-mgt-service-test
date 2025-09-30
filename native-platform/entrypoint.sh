@@ -24,6 +24,17 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
+ENABLE_MTLS=${ENABLE_MTLS:-false}
+export ENABLE_MTLS
+
+## Certificate setup
+/usr/local/bin/certs.sh
+CERTS_RC=$?
+if [ "$CERTS_RC" -ne 0 ]; then
+    echo "[entrypoint] Certificate setup failed with exit code $CERTS_RC; aborting startup."
+    exit "$CERTS_RC"
+fi
+
 # Build and install RFC parameter provider and tr69hostif
 
 rt_pid=`pidof rtrouted`

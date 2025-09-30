@@ -13,17 +13,21 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y vim curl wget nodejs npm openssl
 
-RUN mkdir -p /opt
-RUN cd /opt
-RUN openssl genrsa -out key.pem 2048
-RUN openssl req -new -days 730 -key key.pem -out csr.pem -subj "/C=US/ST=CA/L=San Francisco/O=Platform Security/OU=Platform Security/CN=mockxconf" 
-RUN openssl x509 -req -in csr.pem -signkey key.pem -out cert.pem -days 730
+# Clone and manually install certificate scripts
+WORKDIR /opt
+RUN git clone https://github.com/rdkcentral/rdk-cert-config.git
+RUN mkdir -p /usr/share/cert-scripts && \
+    cp /opt/rdk-cert-config/test/cert-scripts/*.sh /usr/share/cert-scripts/ && \
+    chmod +x /usr/share/cert-scripts/*.sh && \
+    mkdir -p /etc/pki && \
+    ln -sf /usr/share/cert-scripts /etc/pki/scripts && \
+    cd / && \
+    rm -rf /opt/rdk-cert-config
 
-# Create a directory to store the certificates
+# Server certificates will be generated at container startup to ensure fresh certificates each time
+# Create directories for certificates and trust store at build time
 RUN mkdir -p /etc/xconf/certs
-RUN mv key.pem /etc/xconf/certs/mock-xconf-server-key.pem
-RUN mv cert.pem /etc/xconf/certs/mock-xconf-server-cert.pem
-RUN rm -rf /opt/*
+RUN mkdir -p /etc/xconf/trust-store
 
 # TODO: Upgrade to mtls support depending on the offerings from wrappers for SSA
 
@@ -58,6 +62,10 @@ COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY ./certs.sh /usr/local/bin/certs.sh
+RUN chmod +x /usr/local/bin/certs.sh
+
+COPY server-utils.js /usr/local/bin/server-utils.js
 
 COPY data-lake-mock.js /usr/local/bin/data-lake-mock.js
 RUN chmod +x /usr/local/bin/data-lake-mock.js

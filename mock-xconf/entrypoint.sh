@@ -21,6 +21,17 @@
 
 #set -m
 
+ENABLE_MTLS=${ENABLE_MTLS:-false}
+export ENABLE_MTLS
+
+## Certificate setup
+/usr/local/bin/certs.sh
+CERTS_RC=$?
+if [ "$CERTS_RC" -ne 0 ]; then
+	echo "[entrypoint] Certificate setup failed with exit code $CERTS_RC; aborting startup."
+	exit "$CERTS_RC"
+fi
+
 node /usr/local/bin/data-lake-mock.js &
 
 #httpd-foreground
