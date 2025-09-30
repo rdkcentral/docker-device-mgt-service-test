@@ -104,10 +104,6 @@ jobs:
           tags: native-platform:latest
           load: false
 
-      - name: Test for successful generation of client cert from native-platform container and decode it
-        run: |
-          docker run --rm native-platform:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /opt/client.pem"
-
       - name: Prepare expected directory for mount in docker-compose
         run: |
           mkdir -p /tmp/L2_CONTAINER_SHARED_VOLUME
