@@ -91,7 +91,7 @@ jobs:
 
       - name: Dump self-signed public serts from mock-xconf container
         run: |
-          docker run --rm localhost:5000/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem >  device-management-service/native-platform/mock-xconf-server-cert.pem
+          docker run --rm localhost:5000/mockxconf:latest sh -c "sleep 5 && cat /etc/xconf/certs/mock-xconf-server-cert.pem"  >  device-management-service/native-platform/mock-xconf-server-cert.pem
 
       - name: Build native-platform image
         uses: docker/build-push-action@v4
