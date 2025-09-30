@@ -89,9 +89,13 @@ jobs:
           tags: localhost:5000/mockxconf:latest
           load: false
 
-      - name: Dump self-signed public serts from mock-xconf container
+      - name: Test for successful generation of server certs from mock-xconf container and decode it
         run: |
-          docker run --rm localhost:5000/mockxconf:latest sh -c "sleep 5 && cat /etc/xconf/certs/mock-xconf-server-cert.pem"  >  device-management-service/native-platform/mock-xconf-server-cert.pem
+          docker run --rm localhost:5000/mockxconf:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /etc/xconf/certs/mock-xconf-server-cert.pem"
+
+      - name: Test for successful generation of client cert from native-platform container and decode it
+        run: |
+          docker run --rm localhost:5000/native-platform:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /opt/client.pem"
 
       - name: Build native-platform image
         uses: docker/build-push-action@v4
