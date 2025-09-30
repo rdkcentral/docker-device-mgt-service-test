@@ -93,10 +93,6 @@ jobs:
         run: |
           docker run --rm localhost:5000/mockxconf:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /etc/xconf/certs/mock-xconf-server-cert.pem"
 
-      - name: Test for successful generation of client cert from native-platform container and decode it
-        run: |
-          docker run --rm localhost:5000/native-platform:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /opt/client.pem"
-
       - name: Build native-platform image
         uses: docker/build-push-action@v4
         with:
@@ -107,6 +103,10 @@ jobs:
           push: false
           tags: native-platform:latest
           load: false
+
+      - name: Test for successful generation of client cert from native-platform container and decode it
+        run: |
+          docker run --rm native-platform:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /opt/client.pem"
 
       - name: Prepare expected directory for mount in docker-compose
         run: |
