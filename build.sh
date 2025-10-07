@@ -23,8 +23,6 @@ REPOSITORY_NAME="docker-device-mgt-service-test"
 
 # Build container that provides mock xconf service
 cd mock-xconf
-## There is a cert file that is required to be copied to the native-platform container
-##  It has a time element to it, so making sure that its nit built from cache is important
 docker build --no-cache -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest -f Dockerfile .
 cd -
 
@@ -42,12 +40,8 @@ git clone https://github.com/rdkcentral/libSyscallWrapper.git
 git clone https://github.com/rdkcentral/common_utilities.git
 git clone https://github.com/rdkcentral/tr69hostif.git
 
-# Dump the contents of /etc/xconf/certs/mock-xconf-server-cert.pem from above container into a file called mock-xconf-server-cert.pem
-docker run --rm ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem > mock-xconf-server-cert.pem
-
 docker build -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/native-platform:latest -f Dockerfile .
 
-rm -f mock-xconf-server-cert.pem
 rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper

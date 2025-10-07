@@ -21,12 +21,17 @@ const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
+const { applyMtlsConfig } = require('./server-utils');
 
+// HTTPS options with base configuration
 const options = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
   port: 50053
 };
+
+// Apply mTLS settings if enabled using the centralized utility
+applyMtlsConfig(options);
 
 let save_request = false;
 let savedrequest_json={};
