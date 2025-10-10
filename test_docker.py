@@ -14,7 +14,7 @@ MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054]  # Example IPv6 p
 # Define expected files in each container
 EXPECTED_FILES = {
     "mockxconf": ["/etc/xconf/certs/mock-xconf-server-cert.pem", "/etc/xconf/certs/mock-xconf-server-key.pem"],
-    "native-platform": ["/usr/share/ca-certificates/mock-xconf-server-cert.pem"]
+    "native-platform": ["/usr/share/ca-certificates/mock-xconf-root-ca.pem", "/usr/share/ca-certificates/mock-xconf-intermediate-ca.pem"]
 }
 
 @pytest.fixture(scope="module", params=CONTAINERS)

@@ -95,9 +95,9 @@ jobs:
             ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:latest
           load: false
 
-      - name: Dump certificate from mock-xconf container
+      - name: Test for successful generation of server certs from mock-xconf container and decode it
         run: |
-          docker run --rm ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:latest cat /etc/xconf/certs/mock-xconf-server-cert.pem > device-management-service/native-platform/mock-xconf-server-cert.pem
+          docker run --rm ${{  env.REGISTRY_ROOT }}/${{ github.repository }}/mockxconf:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /etc/xconf/certs/mock-xconf-server-cert.pem"
        
       - name: Build and push native-platform image
         uses: docker/build-push-action@v4
