@@ -82,3 +82,6 @@ docker exec -it mockxconf /bin/bash
 4. Login to the container and verify the installation of the required packages.
 5. Create a pull request with the changes.
 6. Once the changes are merged, the new container will be built and deployed to registry in the next release.
+
+#### Mockxconf Server (RDK-RRD-Test_1.0-signed.tar)
+1. This archive (mockxconf/RDK-RRD-Test_1.0-signed.tar) contains all necessary files to download rdm packages from the mockxconf Server.
