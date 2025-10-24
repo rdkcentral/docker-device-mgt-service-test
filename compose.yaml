@@ -23,6 +23,10 @@ services:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     cap_add:
       - NET_ADMIN
+      - SYS_ADMIN
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined  
   
   nmap-container:
     image: "ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest"

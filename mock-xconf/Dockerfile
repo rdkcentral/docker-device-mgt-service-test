@@ -59,6 +59,9 @@ COPY firmware_test.bin /etc/xconf/ABCD_firmware_test.bin
 COPY firmware_test.bin /etc/xconf/ABCD_PDRI_firmware_test.bin
 COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 
+RUN mkdir -p /tmp/RDM
+COPY RDK-RRD-Test_1.0-signed.tar /tmp/RDM 
+
 RUN mkdir -p /usr/local/bin
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
@@ -80,6 +83,9 @@ RUN chmod +x /usr/local/bin/rfcData.js
 
 COPY rrdFileupload.js /usr/local/bin/rrdFileupload.js
 RUN chmod +x /usr/local/bin/rrdFileupload.js
+
+COPY rdmFileupload.js /usr/local/bin/rdmFileupload.js
+RUN chmod +x /usr/local/bin/rdmFileupload.js
 
 CMD ["/usr/local/bin/entrypoint.sh"]
 
