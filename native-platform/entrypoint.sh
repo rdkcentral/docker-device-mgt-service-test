@@ -22,7 +22,27 @@
 export RBUS_ROOT=/ 
 export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
-export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
+
+# Detect architecture for multi-platform support (x86_64 and Apple Silicon/aarch64)
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64)
+        ARCH_LIB_PATH="/usr/lib/x86_64-linux-gnu"
+        ARCH_LIB_PATH_ALT="/lib/x86_64-linux-gnu"
+        ;;
+    aarch64)
+        ARCH_LIB_PATH="/usr/lib/aarch64-linux-gnu"
+        ARCH_LIB_PATH_ALT="/lib/aarch64-linux-gnu"
+        ;;
+    *)
+        echo "Warning: Unsupported architecture $ARCH, defaulting to x86_64 paths"
+        ARCH_LIB_PATH="/usr/lib/x86_64-linux-gnu"
+        ARCH_LIB_PATH_ALT="/lib/x86_64-linux-gnu"
+        ;;
+esac
+
+# Set up library path for both architectures (aligned with cov_build.sh and L2-tests.yml)
+export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:/usr/lib/x86_64-linux-gnu:/lib/aarch64-linux-gnu:/usr/local/lib:$ARCH_LIB_PATH:$ARCH_LIB_PATH_ALT:${LD_LIBRARY_PATH}
 
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
@@ -38,7 +58,7 @@ fi
 # Build and install RFC parameter provider and tr69hostif
 
 rt_pid=`pidof rtrouted`
-if [ ! -z "$rt_routed" ]; then
+if [ ! -z "$rt_pid" ]; then
     kill -9 `pidof rtrouted`
 fi
 
