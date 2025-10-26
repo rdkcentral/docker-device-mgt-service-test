@@ -18,36 +18,57 @@
 # limitations under the License.
 ##########################################################################
 
+# Local build configuration (no registry push)
+# Build images with same names as compose.yaml expects so they take precedence
 REGISTRY_ROOT="ghcr.io/rdkcentral"
 REPOSITORY_NAME="docker-device-mgt-service-test"
+REVISION="local-build"
 
 # Build container that provides mock xconf service
+echo "Building mock-xconf image..."
 cd mock-xconf
 docker build --no-cache -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest -f Dockerfile .
 cd -
 
+# Test mock-xconf container functionality
+echo "Testing mock-xconf container..."
+docker run --rm ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest sh -c "/usr/local/bin/certs.sh && openssl x509 -text -noout -in /etc/xconf/certs/mock-xconf-server-cert.pem"
 
+echo "Building native-platform image..."
 cd native-platform
+
+# Clean up any existing dependencies
 rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
 rm -rf tr69hostif
 
-git clone https://github.com/rdkcentral/rdk_logger.git
-git clone https://github.com/rdkcentral/WebconfigFramework.git
-git clone https://github.com/rdkcentral/libSyscallWrapper.git
-git clone https://github.com/rdkcentral/common_utilities.git
-git clone https://github.com/rdkcentral/tr69hostif.git
+# Clone dependencies with specific versions matching the workflow
+echo "Cloning dependencies with specific versions..."
+git clone -b IMPORT_INITIAL_develop https://github.com/rdkcentral/rdk_logger.git
+git clone -b IMPORT_INITIAL_develop https://github.com/rdkcentral/WebconfigFramework.git
+git clone -b IMPORT_INITIAL_develop https://github.com/rdkcentral/libSyscallWrapper.git
+git clone -b 1.4.0 https://github.com/rdkcentral/common_utilities.git
+git clone -b 1.2.7 https://github.com/rdkcentral/tr69hostif.git
 
-docker build -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/native-platform:latest -f Dockerfile .
+# Build native-platform with build args for host architecture
+docker build --build-arg REVISION=${REVISION} -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/native-platform:latest -f Dockerfile .
 
+# Clean up dependencies
 rm -rf rdk_logger
 rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
 rm -rf tr69hostif
 cd -
+
+echo "Build completed successfully!"
+echo "Built images:"
+echo "  - ${REGISTRY_ROOT}/${REPOSITORY_NAME}/mockxconf:latest"
+echo "  - ${REGISTRY_ROOT}/${REPOSITORY_NAME}/native-platform:latest"
+echo ""
+echo "These images will be used by compose.yaml instead of pulling from remote registry."
 
 
 
