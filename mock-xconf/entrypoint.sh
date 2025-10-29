@@ -43,5 +43,7 @@ node /usr/local/bin/rfcData.js &
 
 node /usr/local/bin/rrdFileupload.js &
 
+node /usr/local/bin/rdmFileupload.js &
+
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
 while true ; do echo "Mocked webservice heartbeat ..." && sleep 5 ; done
