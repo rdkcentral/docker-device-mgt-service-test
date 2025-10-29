@@ -2,6 +2,7 @@ const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
+const { applyMtlsConfig } = require('./server-utils');
 
 const pathupdated = require('path');
 const FILE_ROOT = '/tmp/RDM';
@@ -17,6 +18,9 @@ const options = {
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
   port: 50056
 };
+
+// Apply mTLS settings if enabled using the centralized utility
+applyMtlsConfig(options);
 
 function handleAdminSupportReport(req, res) {
   const queryObject = url.parse(req.url, true).query;
