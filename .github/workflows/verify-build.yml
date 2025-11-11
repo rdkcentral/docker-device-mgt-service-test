@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
         with:
             repository: 'rdkcentral/common_utilities'
-            ref: '1.2.0'
+            ref: '1.4.4'
             path: 'device-management-service/native-platform/common_utilities'
 
       - name: Check out the dependent rdkcentral/tr69hostif repository
