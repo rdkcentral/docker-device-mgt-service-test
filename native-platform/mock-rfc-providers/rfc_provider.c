@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 1
+#define NUMBER_OF_DATA_ELEMENTS 2
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -66,7 +66,8 @@ char dataElementValues[NUMBER_OF_DATA_ELEMENTS][256];
 bool rdkRemoteDebuggerIssueType = false;
 
 char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
-    "false"
+    "false",
+    "SHARE"
 };
 
 void init_dataElementValues()
@@ -80,7 +81,8 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
+    "Device.X_RDKCENTRAL-COM_Privacy.PrivacyMode"
 };
 
 
@@ -90,6 +92,11 @@ void init_dataElementValues()
 rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
     {
         dataElementNames[0], // The name of the data element
+        RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
+        DATA_HANDLER_MACRO
+    },
+    {
+        dataElementNames[1], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
     }
