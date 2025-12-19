@@ -81,7 +81,7 @@ void init_dataElementValues()
 
 // Add a string array to store the data element names
  char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
-    "Device.X_RDK_WebConfig.webcfgSubdocForceReset",
+    "Device.X_RDK_WebConfig.webcfgSubdocForceReset1",
     "Device.X_RDKCENTRAL-COM_Privacy.PrivacyMode"
 };
 
