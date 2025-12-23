@@ -34,21 +34,32 @@ let httpStatusCode = 200; // Can be changed to test different HTTP responses
 const directOptions = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
-  port: 50055
+  port: 50058
 };
+// /etc/xconf/certs/mock-xconf-server-key.pem
+// /etc/pki/Test-RDK-root/Test-RDK-server-ICA/certs/mockxconf.p12
 
 // HTTP options for CodeBig upload endpoint (port 50056)
 const codebigPort = 50056;
 
+// HTTPS options for S3 presigned URL endpoint (port 50057)
+const s3Options = {
+  key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
+  cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
+  port: 50057
+};
+
 // Apply mTLS settings for direct uploads
 applyMtlsConfig(directOptions);
+// Apply mTLS settings for S3 endpoint
+applyMtlsConfig(s3Options);
 
 /**
  * Handles admin endpoints for testing control
  */
 function handleAdminEndpoint(req, res) {
   const queryObject = url.parse(req.url, true).query;
-  
+
   // Enable/disable saving uploaded logs
   if (queryObject.saveUploads === 'true') {
     saveUploadedLogs = true;
@@ -63,7 +74,7 @@ function handleAdminEndpoint(req, res) {
     res.end(JSON.stringify({ message: 'Upload logging disabled and cleared' }));
     return;
   }
-  
+
   // Return saved upload data
   if (queryObject.returnData === 'true') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -73,7 +84,7 @@ function handleAdminEndpoint(req, res) {
     }));
     return;
   }
-  
+
   // Set failure mode for testing
   if (queryObject.failureMode) {
     failureMode = queryObject.failureMode; // 'direct', 'codebig', 'both', or 'none'
@@ -81,7 +92,7 @@ function handleAdminEndpoint(req, res) {
     res.end(JSON.stringify({ message: `Failure mode set to: ${failureMode}` }));
     return;
   }
-  
+
   // Set HTTP status code for responses
   if (queryObject.statusCode) {
     httpStatusCode = parseInt(queryObject.statusCode);
@@ -89,7 +100,7 @@ function handleAdminEndpoint(req, res) {
     res.end(JSON.stringify({ message: `Status code set to: ${httpStatusCode}` }));
     return;
   }
-  
+
   // Reset to defaults
   if (queryObject.reset === 'true') {
     saveUploadedLogs = false;
@@ -101,77 +112,81 @@ function handleAdminEndpoint(req, res) {
     res.end(JSON.stringify({ message: 'Mock server reset to defaults' }));
     return;
   }
-  
+
   res.writeHead(400, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Invalid admin request' }));
 }
 
 /**
- * Handles log upload requests (Direct endpoint)
+ * Handles metadata POST requests (Direct mTLS endpoint)
+ * This receives a filename POST and returns a presigned URL
  */
 function handleDirectLogUpload(req, res) {
   const queryObject = url.parse(req.url, true).query;
-  
+
   // Check if this endpoint should fail
   if (failureMode === 'direct' || failureMode === 'both') {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      statusCode: 500,
-      message: 'Direct upload endpoint simulated failure' 
-    }));
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Direct upload endpoint simulated failure');
     return;
   }
-  
+
   let body = [];
-  let filename = '';
-  let contentType = req.headers['content-type'] || '';
-  
+
   req.on('data', chunk => {
     body.push(chunk);
   });
-  
+
   req.on('end', () => {
-    body = Buffer.concat(body);
-    
-    // Extract filename from URL or headers
+    body = Buffer.concat(body).toString();
+
+    // Extract filename from POST body (e.g., "filename=logs.tar.gz")
+    let filename = 'unknown.tar.gz';
     const urlPath = req.url.split('?')[0];
-    filename = path.basename(urlPath);
-    
-    if (!filename || filename === 'cgi-bin') {
-      // Try to extract from Content-Disposition header
-      const disposition = req.headers['content-disposition'];
-      if (disposition) {
-        const match = disposition.match(/filename="?([^"]+)"?/);
-        if (match) filename = match[1];
-      }
+    const pathFilename = path.basename(urlPath);
+
+    if (pathFilename && pathFilename !== 'cgi-bin' && pathFilename !== '/') {
+      filename = pathFilename;
+    } else if (body) {
+      // Try to extract from form data
+      const match = body.match(/filename[=:]([^\s&]+)/);
+      if (match) filename = match[1];
     }
-    
+
     uploadCount++;
     const uploadId = `upload_${uploadCount}_${Date.now()}`;
-    
-    console.log(`[Direct Upload] Received: ${filename}, Size: ${body.length} bytes`);
-    
+
+    console.log(`[Direct Metadata POST] Filename: ${filename}, Upload ID: ${uploadId}`);
+
     if (saveUploadedLogs) {
       uploadedLogs[uploadId] = {
         timestamp: new Date().toISOString(),
-        endpoint: 'direct',
+        endpoint: 'direct-metadata',
         filename: filename,
-        size: body.length,
-        contentType: contentType,
+        uploadId: uploadId,
+        body: body,
         headers: req.headers,
         query: queryObject
       };
     }
-    
-    // Return configured status code
-    res.writeHead(httpStatusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      statusCode: httpStatusCode,
-      message: 'Upload successful',
-      uploadId: uploadId,
-      filename: filename,
-      size: body.length
-    }));
+
+    // Generate mock S3 presigned URL pointing back to mockxconf:50057
+    const s3Bucket = 'mock-s3-bucket';
+    const s3Key = `logs/${uploadId}/${filename}`;
+    const mockS3Url = `https://mockxconf:50057/${s3Bucket}/${s3Key}?uploadId=${uploadId}&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=MOCKKEY&X-Amz-Date=20251220T000000Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=mocksignature`;
+
+    // Return presigned URL in response body (not a redirect)
+    // The upload library expects HTTP 200 with URL in body
+    if (httpStatusCode === 200) {
+      res.writeHead(200, {
+        'Content-Type': 'text/plain'
+      });
+      res.end(mockS3Url);
+    } else {
+      // For non-200 status codes, return error response
+      res.writeHead(httpStatusCode, { 'Content-Type': 'text/plain' });
+      res.end(`Upload failed with status ${httpStatusCode}`);
+    }
   });
 }
 
@@ -180,32 +195,32 @@ function handleDirectLogUpload(req, res) {
  */
 function handleCodeBigLogUpload(req, res) {
   const queryObject = url.parse(req.url, true).query;
-  
+
   // Check if this endpoint should fail
   if (failureMode === 'codebig' || failureMode === 'both') {
     res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
+    res.end(JSON.stringify({
       statusCode: 500,
-      message: 'CodeBig upload endpoint simulated failure' 
+      message: 'CodeBig upload endpoint simulated failure'
     }));
     return;
   }
-  
+
   let body = [];
   let filename = '';
   let contentType = req.headers['content-type'] || '';
-  
+
   req.on('data', chunk => {
     body.push(chunk);
   });
-  
+
   req.on('end', () => {
     body = Buffer.concat(body);
-    
+
     // Extract filename from URL or headers
     const urlPath = req.url.split('?')[0];
     filename = path.basename(urlPath);
-    
+
     if (!filename || filename === 'cgi-bin') {
       const disposition = req.headers['content-disposition'];
       if (disposition) {
@@ -213,12 +228,12 @@ function handleCodeBigLogUpload(req, res) {
         if (match) filename = match[1];
       }
     }
-    
+
     uploadCount++;
     const uploadId = `upload_${uploadCount}_${Date.now()}`;
-    
+
     console.log(`[CodeBig Upload] Received: ${filename}, Size: ${body.length} bytes`);
-    
+
     if (saveUploadedLogs) {
       uploadedLogs[uploadId] = {
         timestamp: new Date().toISOString(),
@@ -230,16 +245,108 @@ function handleCodeBigLogUpload(req, res) {
         query: queryObject
       };
     }
-    
-    // Return configured status code
-    res.writeHead(httpStatusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      statusCode: httpStatusCode,
-      message: 'Upload successful via CodeBig',
-      uploadId: uploadId,
-      filename: filename,
-      size: body.length
-    }));
+
+    // Generate mock S3 presigned URL pointing back to mockxconf:50057
+    const s3Bucket = 'mock-s3-bucket';
+    const s3Region = 'us-east-1';
+    const s3Key = `logs/${uploadId}/${filename}`;
+    const mockS3Url = `https://mockxconf:50057/${s3Bucket}/${s3Key}?uploadId=${uploadId}&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=MOCKKEY&X-Amz-Date=20251220T000000Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=mocksignature`;
+
+    // Return HTTP 302 redirect with Location header (standard S3 presigned URL flow)
+    if (httpStatusCode === 200) {
+      res.writeHead(302, {
+        'Location': mockS3Url,
+        'Content-Type': 'text/plain'
+      });
+      res.end(mockS3Url);
+    } else {
+      // For non-200 status codes, return error response
+      res.writeHead(httpStatusCode, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        statusCode: httpStatusCode,
+        message: 'Upload failed via CodeBig',
+        uploadId: uploadId,
+        filename: filename,
+        size: body.length
+      }));
+    }
+  });
+}
+
+/**
+ * Handles S3 presigned URL PUT requests
+ */
+function handleS3Put(req, res) {
+  const queryObject = url.parse(req.url, true).query;
+  const uploadId = queryObject.uploadId || 'unknown';
+
+  console.log(`[S3 PUT] ${req.method} ${req.url}`);
+  console.log(`[S3 PUT] Upload ID: ${uploadId}`);
+
+  // Only accept PUT requests
+  if (req.method !== 'PUT') {
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Method not allowed. Use PUT.' }));
+    return;
+  }
+
+  let body = [];
+  let totalBytes = 0;
+
+  req.on('data', chunk => {
+    body.push(chunk);
+    totalBytes += chunk.length;
+  });
+
+  req.on('end', () => {
+    body = Buffer.concat(body);
+
+    console.log(`[S3 PUT] Received file: ${totalBytes} bytes`);
+
+    // Save uploaded file to disk
+    const uploadDir = '/mnt/L2_CONTAINER_SHARED_VOLUME/uploaded_logs';
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Extract filename from URL path
+      const urlPath = req.url.split('?')[0];
+      const filename = path.basename(urlPath) || `upload_${uploadId}.tar.gz`;
+      const filepath = path.join(uploadDir, `${uploadId}_${filename}`);
+
+      fs.writeFileSync(filepath, body);
+      console.log(`[S3 PUT] File saved to: ${filepath}`);
+
+      if (saveUploadedLogs) {
+        uploadedLogs[`s3_${uploadId}`] = {
+          timestamp: new Date().toISOString(),
+          endpoint: 's3-presigned',
+          uploadId: uploadId,
+          size: body.length,
+          filepath: filepath,
+          contentType: req.headers['content-type'] || 'application/octet-stream',
+          headers: req.headers,
+          query: queryObject
+        };
+      }
+    } catch (err) {
+      console.error(`[S3 PUT] Error saving file: ${err.message}`);
+    }
+
+    // Return 200 OK (S3 presigned URL success response)
+    res.writeHead(200, {
+      'Content-Type': 'text/plain',
+      'ETag': `"${uploadId}"`,
+      'x-amz-request-id': uploadId
+    });
+    res.end('OK');
+  });
+
+  req.on('error', (err) => {
+    console.error(`[S3 PUT] Error receiving data: ${err.message}`);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Upload failed' }));
   });
 }
 
@@ -248,7 +355,7 @@ function handleCodeBigLogUpload(req, res) {
  */
 function directRequestHandler(req, res) {
   console.log(`[Direct] ${req.method} ${req.url}`);
-  
+
   if (req.url.startsWith('/admin/stbLogUpload')) {
     handleAdminEndpoint(req, res);
   } else {
@@ -262,7 +369,7 @@ function directRequestHandler(req, res) {
  */
 function codebigRequestHandler(req, res) {
   console.log(`[CodeBig] ${req.method} ${req.url}`);
-  
+
   if (req.url.startsWith('/admin/stbLogUpload')) {
     handleAdminEndpoint(req, res);
   } else {
@@ -297,4 +404,13 @@ codebigServer.listen(codebigPort, () => {
   console.log(`  - Reset: http://localhost:${codebigPort}/admin/stbLogUpload?reset=true`);
 });
 
-module.exports = { directServer, codebigServer };
+// Create HTTPS server for S3 presigned URL uploads (port 50057)
+const s3Server = https.createServer(s3Options, handleS3Put);
+
+s3Server.listen(s3Options.port, () => {
+  console.log(`STB Log Upload Mock Server (S3 Presigned) running on https://localhost:${s3Options.port}`);
+  console.log('  - Accepts PUT requests with presigned URL query parameters');
+  console.log('  - Uploaded files saved to: /mnt/L2_CONTAINER_SHARED_VOLUME/uploaded_logs/');
+});
+
+module.exports = { directServer, codebigServer, s3Server };
