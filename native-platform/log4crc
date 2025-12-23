@@ -21,39 +21,36 @@
         <appender name="RI_fwdlrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="swupdate.txt" layout="dated" rollingpolicy="myrollingpolicyfwdl" />
         <!-- Should start with RI.Stack as prefix for logging to work. This is coming somewhere from rdklogger -->
         <category name="RI.Stack.LOG.RDK.FWUPG" priority="debug" appender="RI_fwdlrollingfileappender"/>
-
+  
         <rollingpolicy name="myrollingpolicyrfcmgr" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcmgr" />
         <category name="RI.Stack.LOG.RDK.RFCMGR" priority="debug" appender="RI_RFCMGRrollingfileappender"/>
 
         <rollingpolicy name="myrollingpolicyremotedebugger" type="sizewin" maxsize="50485760" maxnum="10" />
         <appender name="RI_REMOTEDEBUGGERrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="remotedebugger.log" layout="dated" rollingpolicy="myrollingpolicyremotedebugger" />
-        <category name="RI.Stack.LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
-        <rollingpolicy name="myrollingpolicylogupload" type="sizewin" maxsize="50485760" maxnum="10" />
-        <appender name="RI_UPLOADSTBrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logupload.log" layout="dated" rollingpolicy="myrollingpolicylogupload" />
-        <category name="RI.Stack.LOG.RDK.UPLOADSTB" priority="debug" appender="RI_UPLOADSTBrollingfileappender"/>
+	<category name="RI.Stack.LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
 
         <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCAPIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcapi" />
         <category name="RI.Stack.LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
-
+	
         <rollingpolicy name="myrollingpolicytr181api" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_TR181APIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicytr181api" />
         <category name="RI.Stack.LOG.RDK.TR181API" priority="debug" appender="RI_TR181APIrollingfileappender"/>
 
         <rollingpolicy name="myrollingpolicytr69hostif" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_TR69HOSTIFrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="tr69hostif.log" layout="dated" rollingpolicy="myrollingpolicytr69hostif" />
-        <category name="RI.Stack.LOG.RDK.TR69HOSTIF" priority="debug" appender="RI_TR69HOSTIFrollingfileappender"/>
+	<category name="RI.Stack.LOG.RDK.TR69HOSTIF" priority="debug" appender="RI_TR69HOSTIFrollingfileappender"/>
 
-        <rollingpolicy name="myrollingpolicysystimemgr" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_SYSTIMEMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="systimemgr.log" layout="dated" rollingpolicy="myrollingpolicysystimemgr" />
-        <category name="RI.Stack.LOG.RDK.SYSTIMEMGR" priority="debug" appender="RI_SYSTIMEMGRrollingfileappender"/>
+	<rollingpolicy name="myrollingpolicysystimemgr" type="sizewin" maxsize="10485760" maxnum="10" />
+	<appender name="RI_SYSTIMEMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="systimemgr.log" layout="dated" rollingpolicy="myrollingpolicysystimemgr" />
+	<category name="RI.Stack.LOG.RDK.SYSTIMEMGR" priority="debug" appender="RI_SYSTIMEMGRrollingfileappender"/>
 
-        <rollingpolicy name="myrollingpolicydcmagent" type="sizewin" maxsize="10485760" maxnum="10" />
+	<rollingpolicy name="myrollingpolicydcmagent" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_DCMAGENTrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="dcmd.log" layout="dated" rollingpolicy="myrollingpolicydcmagent" />
         <category name="RI.Stack.LOG.RDK.DCM" priority="debug" appender="RI_DCMAGENTrollingfileappender"/>
 
-        <rollingpolicy name="myrollingpolicyrdmagent" type="sizewin" maxsize="10485760" maxnum="10" />
+	<rollingpolicy name="myrollingpolicyrdmagent" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RDMAGENTrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rdm_status.log" layout="dated" rollingpolicy="myrollingpolicyrdmagent" />
         <category name="RI.Stack.LOG.RDK.RDMAGENT" priority="debug" appender="RI_RDMAGENTrollingfileappender"/>
 </log4c>
