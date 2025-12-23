@@ -30,6 +30,10 @@
         <appender name="RI_REMOTEDEBUGGERrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="remotedebugger.log" layout="dated" rollingpolicy="myrollingpolicyremotedebugger" />
 	<category name="RI.Stack.LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
 
+        <rollingpolicy name="myrollingpolicylogupload" type="sizewin" maxsize="50485760" maxnum="10" />
+        <appender name="RI_UPLOADSTBrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logupload.log" layout="dated" rollingpolicy="myrollingpolicylogupload" />
+        <category name="RI.Stack.LOG.RDK.UPLOADSTB" priority="debug" appender="RI_UPLOADSTBrollingfileappender"/>
+
         <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RFCAPIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="dated" rollingpolicy="myrollingpolicyrfcapi" />
         <category name="RI.Stack.LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
