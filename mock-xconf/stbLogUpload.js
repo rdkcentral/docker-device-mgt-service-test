@@ -18,11 +18,11 @@
 */
 
 const https = require('node:https');
-const http = require('node:http');
+
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
-const { applyMtlsConfig } = require('./server-utils');
+
 
 let saveUploadedLogs = true;
 let uploadedLogs = {};
@@ -50,7 +50,7 @@ function loadCertificates() {
 
 const certs = loadCertificates();
 
-// HTTPS options for Direct upload endpoint (port 50055)
+// HTTPS options for Direct upload endpoint (port 50058)
 const directOptions = {
   ...(certs || {}),
   port: 50058
@@ -298,7 +298,7 @@ function directRequestHandler(req, res) {
 
 
 
-// Create HTTPS server for Direct uploads (port 50055)
+// Create HTTPS server for Direct uploads (port 50058)
 const directServer = https.createServer(directOptions, directRequestHandler);
 
 directServer.listen(directOptions.port, () => {
