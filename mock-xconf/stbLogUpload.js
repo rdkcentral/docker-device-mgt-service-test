@@ -72,14 +72,14 @@ function handleAdminEndpoint(req, res) {
   if (queryObject.saveUploads === 'true') {
     saveUploadedLogs = true;
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message: 'Upload logging enabled' }));
+    res.end(JSON.stringify({ message: 'Save uploads enabled' }));
     return;
   } else if (queryObject.saveUploads === 'false') {
-    saveUploadedLogs = true;
+    saveUploadedLogs = false;
     uploadedLogs = {};
     uploadCount = 0;
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ message: 'Upload logging disabled and cleared' }));
+    res.end(JSON.stringify({ message: 'Save uploads disabled and cleared' }));
     return;
   }
 
