@@ -103,7 +103,13 @@ function handleAdminEndpoint(req, res) {
 
   // Set HTTP status code for responses
   if (queryObject.statusCode) {
-    httpStatusCode = parseInt(queryObject.statusCode);
+    const parsedStatusCode = parseInt(queryObject.statusCode, 10);
+    if (Number.isNaN(parsedStatusCode) || parsedStatusCode < 100 || parsedStatusCode > 599) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Invalid status code: ${queryObject.statusCode}` }));
+      return;
+    }
+    httpStatusCode = parsedStatusCode;
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: `Status code set to: ${httpStatusCode}` }));
     return;
