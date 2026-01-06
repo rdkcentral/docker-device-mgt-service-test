@@ -257,17 +257,21 @@ function handleS3Put(req, res) {
           query: queryObject
         };
       }
+
+      // Return 200 OK (S3 presigned URL success response) only if save succeeded
+      res.writeHead(200, {
+        'Content-Type': 'text/plain',
+        'ETag': `"${uploadId}"`,
+        'x-amz-request-id': uploadId
+      });
+      res.end('OK');
+      return;
     } catch (err) {
       console.error(`[S3 PUT] Error saving file: ${err.message}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Failed to save uploaded file' }));
+      return;
     }
-
-    // Return 200 OK (S3 presigned URL success response)
-    res.writeHead(200, {
-      'Content-Type': 'text/plain',
-      'ETag': `"${uploadId}"`,
-      'x-amz-request-id': uploadId
-    });
-    res.end('OK');
   });
 
   req.on('error', (err) => {
