@@ -62,11 +62,6 @@ const s3Options = {
   port: 50057
 };
 
-// Apply mTLS settings for direct uploads
-//applyMtlsConfig(directOptions);
-// Apply mTLS settings for S3 endpoint
-//applyMtlsConfig(s3Options);
-
 /**
  * Handles admin endpoints for testing control
  */
@@ -79,7 +74,7 @@ function handleAdminEndpoint(req, res) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ message: 'Upload logging enabled' }));
     return;
-  } else if (queryObject.saveUploads === 'true') {
+  } else if (queryObject.saveUploads === 'false') {
     saveUploadedLogs = true;
     uploadedLogs = {};
     uploadCount = 0;
