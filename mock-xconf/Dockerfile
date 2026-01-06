@@ -87,6 +87,9 @@ RUN chmod +x /usr/local/bin/rrdFileupload.js
 COPY rdmFileupload.js /usr/local/bin/rdmFileupload.js
 RUN chmod +x /usr/local/bin/rdmFileupload.js
 
+COPY stbLogUpload.js /usr/local/bin/stbLogUpload.js
+RUN chmod +x /usr/local/bin/stbLogUpload.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
@@ -95,3 +98,6 @@ EXPOSE 50052
 EXPOSE 50053
 EXPOSE 50054
 EXPOSE 50056
+EXPOSE 50057
+EXPOSE 50058
+
