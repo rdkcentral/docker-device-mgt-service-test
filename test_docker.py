@@ -60,8 +60,8 @@ def test_node_processes_running_mockxconf(container):
     node_process_count = int(output.strip())  # Convert output to integer
     print(f"Found {node_process_count} Node.js processes running in {container.name}")
 
-    assert node_process_count == 6, f"Expected 6 Node.js processes, but found {node_process_count}!"
-    print(f"✅ All 6 Node.js processes are running in {container.name}")
+    assert node_process_count == 8, f"Expected 8 Node.js processes, but found {node_process_count}!"
+    print(f"✅ All 8 Node.js processes are running in {container.name}")
 
 def test_files_exist(container):
     """Verify that expected files exist in the respective container."""
