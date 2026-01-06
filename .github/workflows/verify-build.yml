@@ -110,7 +110,7 @@ jobs:
 
       - name: Start mock-xconf service
         run: |
-          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50053:50053 -p 50054:50054 -p 50056:50056 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME localhost:5000/mockxconf:latest
+          docker run -d --name mockxconf -p 50050:50050 -p 50051:50051 -p 50052:50052 -p 50053:50053 -p 50054:50054 -p 50056:50056 -p 50057:50057 -p 50058:50058 -v ${{ github.workspace }}:/mnt/L2_CONTAINER_SHARED_VOLUME localhost:5000/mockxconf:latest
 
       - name: Start native-platform service
         run: |

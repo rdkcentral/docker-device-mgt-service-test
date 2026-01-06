@@ -9,6 +9,8 @@ services:
       - "50052:50052"
       - "50053:50053"
       - "50056:50056"
+      - "50057:50057"
+      - "50058:50058"
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:

@@ -9,7 +9,7 @@ client = docker.DockerClient(base_url="unix:///var/run/docker.sock")
 CONTAINERS = ["mockxconf", "native-platform"]
 
 # Define expected open ports for mockxconf only (since you want IPv6 check for mockxconf)
-MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50056]  # Example IPv6 ports for mockxconf
+MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50056, 50057, 50058]  # Example IPv6 ports for mockxconf
 
 # Define expected files in each container
 EXPECTED_FILES = {
@@ -60,8 +60,8 @@ def test_node_processes_running_mockxconf(container):
     node_process_count = int(output.strip())  # Convert output to integer
     print(f"Found {node_process_count} Node.js processes running in {container.name}")
 
-    assert node_process_count == 6, f"Expected 6 Node.js processes, but found {node_process_count}!"
-    print(f"✅ All 6 Node.js processes are running in {container.name}")
+    assert node_process_count == 7, f"Expected 7 Node.js processes, but found {node_process_count}!"
+    print(f"✅ All 7 Node.js processes are running in {container.name}")
 
 def test_files_exist(container):
     """Verify that expected files exist in the respective container."""
