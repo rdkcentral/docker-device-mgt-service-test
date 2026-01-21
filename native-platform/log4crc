@@ -34,7 +34,7 @@
         <appender name="RI_UPLOADSTBrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logupload.log" layout="dated" rollingpolicy="myrollingpolicylogupload" />
 	<category name="RI.Stack.LOG.RDK.UPLOADSTB" priority="debug" appender="RI_UPLOADSTBrollingfileappender"/>
 
-	<rollingpolicy name="myrollingpolicycommonutil" type="sizewin" maxsize="50485760" maxnum="10" />
+        <rollingpolicy name="myrollingpolicycommonutil" type="sizewin" maxsize="50485760" maxnum="10" />
         <appender name="RI_COMMONUTILITIESrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logcommon.log" layout="dated" rollingpolicy="myrollingpolicycommonutil" />
         <category name="RI.Stack.LOG.RDK.COMMONUTILITIES" priority="debug" appender="RI_COMMONUTILITIESrollingfileappender"/>
 
