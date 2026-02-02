@@ -11,6 +11,8 @@ services:
       - "50056:50056"
       - "50057:50057"
       - "50058:50058"
+      - "50059:50059"  # Crash metadata endpoint
+      - "50060:50060"  # S3 presigned URL endpoint
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
