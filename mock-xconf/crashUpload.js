@@ -1,7 +1,26 @@
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const url = require('url');
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2025 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+const https = require('node:https');
+const fs = require('node:fs');
+const path = require('node:path');
+const url = require('node:url');
 
 // Server state
 let saveUploadedDumps = true;
@@ -10,17 +29,35 @@ let uploadCount = 0;
 let failureMode = null;
 let httpStatusCode = 200;
 
+// Helper function to safely load certificates
+function loadCertificates() {
+  const keyPath = '/etc/xconf/certs/mock-xconf-server-key.pem';
+  const certPath = '/etc/xconf/certs/mock-xconf-server-cert.pem';
+
+  try {
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      return {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+      };
+    }
+  } catch (err) {
+    console.warn('Failed to load certificates:', err.message);
+  }
+  return null;
+}
+
+const certs = loadCertificates();
+
 // HTTPS options for metadata endpoint (port 50059)
 const metadataOptions = {
-  key: fs.readFileSync('/etc/xconf/certs/mock-xconf-server-key.pem'),
-  cert: fs.readFileSync('/etc/xconf/certs/mock-xconf-server-cert.pem'),
+  ...(certs || {}),
   port: 50059
 };
 
 // HTTPS options for S3 presigned URL endpoint (port 50060)
 const s3Options = {
-  key: fs.readFileSync('/etc/xconf/certs/mock-xconf-server-key.pem'),
-  cert: fs.readFileSync('/etc/xconf/certs/mock-xconf-server-cert.pem'),
+  ...(certs || {}),
   port: 50060
 };
 
@@ -97,12 +134,26 @@ function handleCrashMetadataPost(req, res) {
   req.on('end', () => {
     body = Buffer.concat(body).toString();
     
-    // Parse metadata from POST body (form data)
+    // Validate Content-Type for form data parsing
+    const contentType = req.headers['content-type'] || '';
     const metadata = {};
-    body.split('&').forEach(param => {
-      const [key, value] = param.split('=');
-      metadata[key] = decodeURIComponent(value || '');
-    });
+    
+    if (contentType.includes('application/json')) {
+      // Parse JSON body
+      try {
+        Object.assign(metadata, JSON.parse(body));
+      } catch (err) {
+        console.warn('[Crash Metadata] Failed to parse JSON body:', err.message);
+      }
+    } else {
+      // Parse form data (application/x-www-form-urlencoded or multipart/form-data)
+      body.split('&').forEach(param => {
+        const [key, value] = param.split('=');
+        if (key) {
+          metadata[key] = decodeURIComponent(value || '');
+        }
+      });
+    }
 
     uploadCount++;
     const uploadId = `crash_${uploadCount}_${Date.now()}`;
@@ -127,7 +178,10 @@ function handleCrashMetadataPost(req, res) {
     // Generate S3 presigned URL pointing to port 50060
     const s3Bucket = 'crash-dump-bucket';
     const s3Key = `crashdumps/${uploadId}/${metadata.filename || 'dump.tgz'}`;
-    const presignedUrl = `https://mockxconf:50060/${s3Bucket}/${s3Key}?uploadId=${uploadId}&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=MOCKKEY&X-Amz-Date=${new Date().toISOString()}&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=mocksignature`;
+    const hostHeader = req.headers.host || 'mockxconf:50059';
+    const uploadHost = hostHeader.includes(':') ? hostHeader.split(':')[0] : hostHeader;
+    const baseUrl = `https://${uploadHost}:50060`;
+    const presignedUrl = `${baseUrl}/${s3Bucket}/${s3Key}?uploadId=${uploadId}&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=MOCKKEY&X-Amz-Date=${new Date().toISOString()}&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=mocksignature`;
 
     if (httpStatusCode === 200) {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -173,8 +227,18 @@ function handleS3Put(req, res) {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
+      // Safely extract and sanitize filename to prevent directory traversal
       const urlPath = req.url.split('?')[0];
-      const filename = path.basename(urlPath) || `crash_${uploadId}.tgz`;
+      let filename = path.basename(urlPath) || `crash_${uploadId}.tgz`;
+      
+      // Sanitize filename: remove path traversal sequences and special characters
+      filename = filename.replace(/\.\./g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+      
+      // Ensure filename is not empty after sanitization
+      if (!filename || filename.length === 0) {
+        filename = `crash_${uploadId}.tgz`;
+      }
+      
       const filepath = path.join(uploadDir, filename);
 
       fs.writeFileSync(filepath, body);
@@ -198,9 +262,18 @@ function handleS3Put(req, res) {
       });
       res.end('OK');
     } catch (err) {
-      console.error(`[S3 PUT] Error: ${err.message}`);
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Failed to save file' }));
+
+      console.error(`[S3 PUT] Error saving file: ${err.message}`);
+      let statusCode = 500;
+      let clientErrorMessage = 'Failed to save file';
+      if (err && err.code === 'ENOSPC') {
+        statusCode = 507;
+        clientErrorMessage = 'Insufficient Storage';
+      } else if (err && (err.code === 'EACCES' || err.code === 'EPERM')) {
+        clientErrorMessage = 'Server is not permitted to write to storage';
+      }
+      res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: clientErrorMessage }));
     }
   });
 }
@@ -231,10 +304,18 @@ metadataServer.listen(metadataOptions.port, () => {
   console.log(`  - Reset: https://mockxconf:${metadataOptions.port}/admin/crashUpload?reset=true`);
 });
 
+metadataServer.on('error', (err) => {
+  console.error('Metadata Server error:', err);
+});
+
 s3Server.listen(s3Options.port, () => {
   console.log(`Crash Upload S3 Server running on https://localhost:${s3Options.port}`);
   console.log('  - Accepts PUT requests with presigned URL parameters');
   console.log('  - Files saved to: /mnt/L2_CONTAINER_SHARED_VOLUME/uploaded_crashes/');
+});
+
+s3Server.on('error', (err) => {
+  console.error('S3 Server error:', err);
 });
 
 module.exports = { metadataServer, s3Server };
