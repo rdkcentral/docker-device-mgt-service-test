@@ -61,4 +61,8 @@
 	<rollingpolicy name="myrollingpolicyrdmagent" type="sizewin" maxsize="10485760" maxnum="10" />
         <appender name="RI_RDMAGENTrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rdm_status.log" layout="dated" rollingpolicy="myrollingpolicyrdmagent" />
         <category name="RI.Stack.LOG.RDK.RDMAGENT" priority="debug" appender="RI_RDMAGENTrollingfileappender"/>
+
+	<rollingpolicy name="myrollingpolicycrashupload" type="sizewin" maxsize="10485760" maxnum="10" />
+        <appender name="RI_CRASHUPLOADrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="core_log.txt" layout="dated" rollingpolicy="myrollingpolicycrashupload" />
+        <category name="RI.Stack.LOG.RDK.CRASHUPLOAD" priority="debug" appender="RI_CRASHUPLOADrollingfileappender"/>
 </log4c>
