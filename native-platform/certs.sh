@@ -68,7 +68,14 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Generate certificates for PKI testing
     echo "[certs] Generating client certificates..."
-    /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
+    # Add --enable-pkcs11-ref flag if PKCS11 is enabled
+    ENABLE_PKCS11=${ENABLE_PKCS11:-false}
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] PKCS#11 enabled - generating reference P12"
+        /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient" --enable-pkcs11-ref
+    else
+        /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
+    fi
 
     # Create certificate directories for mTLS
     mkdir -p "$SHARED_CERTS_DIR/client"
