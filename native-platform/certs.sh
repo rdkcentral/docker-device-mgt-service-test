@@ -24,6 +24,13 @@ set -e
 # Certificate setup for native-platform container
 ##########################################################################
 
+# Verify update-ca-certificates command is available
+if [ ! -x "/usr/sbin/update-ca-certificates" ]; then
+    echo "[certs] ERROR: /usr/sbin/update-ca-certificates not found or not executable"
+    echo "[certs] ca-certificates package may not be installed properly"
+    exit 1
+fi
+
 # Shared certificates base directory
 SHARED_CERTS_DIR="/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs"
 mkdir -p "$SHARED_CERTS_DIR"
@@ -43,28 +50,59 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     echo "[certs] Waiting for server certificates..."
     done
 
-    # Copy individual server CA certificates to system trust store
+    # Copy root CA to system trust store
     cp "$SHARED_CERTS_DIR/server/root_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
-    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
+    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
+    
+    # Copy intermediate CA to system trust store
+    if [ -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; then
+        cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+        chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+        echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf || true
+    fi
+    
+    # Register CA certificates and update system trust store
+    echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf || true
+    /usr/sbin/update-ca-certificates --fresh
+    echo "[certs] System CA trust store updated"
 
     # Cleanup shared server certs after import
     rm -f "$SHARED_CERTS_DIR/server/root_ca.pem" \
         "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 
-    # Update CA certificates
-    echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf || true
-    echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf || true
-    update-ca-certificates --fresh
+    echo "[certs] Server CA certificates imported"
 else
     echo "[certs] mock-xconf not resolvable (${MOCKXCONF_HOST}); skipping server CA import"
 fi
 
 # Enable mTLS if specified via environment variable (default: disabled)
 ENABLE_MTLS=${ENABLE_MTLS:-false}
+ENABLE_PKCS11=${ENABLE_PKCS11:-false}
+
 echo "[certs] Starting with mTLS: $ENABLE_MTLS"
 if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS enabled - performing certificate operations"
+
+    # PKCS#11 mTLS Support - Setup OpenSSL with PKCS#11 patch
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] ENABLE_PKCS11=true - Setting up PKCS#11 for mTLS..."
+        
+        if [ ! -f "/usr/local/openssl-pkcs11-ready" ]; then
+            OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
+            echo "[certs] Checking ${OPENSSL_VERSION} with PKCS#11 patch..."
+            /usr/local/bin/setup-pkcs11-openssl.sh
+            if [ $? -eq 0 ]; then
+                touch /usr/local/openssl-pkcs11-ready
+                echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch ready"
+            else
+                echo "[certs] ERROR: PKCS#11 OpenSSL setup failed"
+                exit 1
+            fi
+        else
+            OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
+            echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch already ready (cached)"
+        fi
+    fi
 
     # Generate certificates for PKI testing
     echo "[certs] Generating client certificates..."
@@ -100,10 +138,25 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     cat "$CLIENT_CERT" > "$DEFAULT_PEM"
     cat "$CLIENT_KEY" >> "$DEFAULT_PEM"
     cp "$CLIENT_P12" "$DEFAULT_P12"
+    
+    # Generate reference P12 with sentinel key for PKCS#11 testing
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] Generating reference P12 with sentinel key for PKCS#11..."
+        if /usr/local/share/cert-scripts/create_reference_p12 "$CLIENT_CERT" /opt/certs/reference.p12 "changeit"; then
+            echo "[certs] Reference P12 created at /opt/certs/reference.p12"
+        else
+            echo "[certs] ERROR: Failed to create reference P12" >&2
+            exit 1
+        fi
+    fi
 
     # Copy client CA chain to shared volume for mock-xconf container
     mkdir -p "$SHARED_CERTS_DIR/client"
-    cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    if [ -f "$CLIENT_ICA_CHAIN" ]; then
+        cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    else
+        echo "[certs] WARNING: Client ICA chain not found at $CLIENT_ICA_CHAIN" >&2
+    fi
 
     # Validate shared export exists and is non-empty
     if [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
@@ -114,11 +167,43 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
 
+    # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] Setting up PKCS#11 token and importing certificates..."
+        if [ -f "/opt/certs/client.p12" ] || [ -f "/opt/certs/reference.p12" ]; then
+            /usr/local/bin/setup-pkcs11.sh
+            if [ $? -eq 0 ]; then
+                echo "[certs] ✓ PKCS#11 token initialized, certificates imported, and configs created"
+            else
+                echo "[certs] ERROR: PKCS#11 setup failed"
+                exit 1
+            fi
+        else
+            echo "[certs] ERROR: No P12 files found in /opt/certs for PKCS#11 setup"
+            exit 1
+        fi
+    fi
+
     # Create CertSelector configuration file
     echo "[certs] Creating CertSelector configuration file..."
     mkdir -p /etc/ssl/certsel
-    echo "MTLS|SRVR_TLS,OPERFS_P12,P12,file://${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
-    echo "MTLS_PEM,OPERFS_PEM,PEM,file://${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    
+    # Add reference.p12 first if PKCS#11 enabled
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "MTLS,REFERENCE_P12,P12,file:///opt/certs/reference.p12,changeit" > /etc/ssl/certsel/certsel.cfg
+        echo "[certs] ✓ Added PKCS#11 reference cert as primary"
+    fi
+    
+    # Add standard client certificates (fallback for PKCS#11, primary for normal mode)
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "MTLS,CLIENT_P12,P12,file:///opt/certs/client.p12,changeit" >> /etc/ssl/certsel/certsel.cfg
+        echo "MTLS,CLIENT_PEM,PEM,file:///opt/certs/client.pem," >> /etc/ssl/certsel/certsel.cfg
+        echo "[certs] ✓ CertSelector configured: reference.p12 with fallback to client certs"
+    else
+        echo "MTLS,CLIENT_P12,P12,file:///opt/certs/client.p12,changeit" > /etc/ssl/certsel/certsel.cfg
+        echo "MTLS,CLIENT_PEM,PEM,file:///opt/certs/client.pem," >> /etc/ssl/certsel/certsel.cfg
+        echo "[certs] ✓ CertSelector configured: standard client certs"
+    fi
 
     echo "[certs] mTLS certificate trust flow established"
 else
