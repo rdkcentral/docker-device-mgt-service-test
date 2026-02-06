@@ -72,7 +72,7 @@ RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
 RUN rm -rf /opt/trower-base64
 
 #Install RDK cert selector libraries
-RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
+RUN cd /opt && git clone -b feature/RDK-60640 https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
