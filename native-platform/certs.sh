@@ -68,14 +68,7 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Generate certificates for PKI testing
     echo "[certs] Generating client certificates..."
-    # Add --enable-pkcs11-ref flag if PKCS11 is enabled
-    ENABLE_PKCS11=${ENABLE_PKCS11:-false}
-    if [ "$ENABLE_PKCS11" = "true" ]; then
-        echo "[certs] PKCS#11 enabled - generating reference P12"
-        /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient" --enable-pkcs11-ref
-    else
-        /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
-    fi
+    /etc/pki/scripts/generate_test_rdk_certs.sh --type client --cn "rdkclient"
 
     # Create certificate directories for mTLS
     mkdir -p "$SHARED_CERTS_DIR/client"
@@ -120,6 +113,22 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
+
+    # Generate reference P12 with sentinel key for PKCS#11 testing
+    ENABLE_PKCS11=${ENABLE_PKCS11:-false}
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] PKCS#11 enabled - generating reference P12 with sentinel key"
+        if [ -f "/etc/pki/scripts/create-reference-p12.sh" ]; then
+            /etc/pki/scripts/create-reference-p12.sh "$CLIENT_CERT" /opt/certs/reference.p12 changeit
+            if [ $? -eq 0 ]; then
+                echo "[certs] ✓ Reference P12 created for PKCS#11 testing"
+            else
+                echo "[certs] WARNING: Failed to create reference P12" >&2
+            fi
+        else
+            echo "[certs] WARNING: create-reference-p12.sh not found, skipping reference P12" >&2
+        fi
+    fi
 
     # Create CertSelector configuration file
     echo "[certs] Creating CertSelector configuration file..."

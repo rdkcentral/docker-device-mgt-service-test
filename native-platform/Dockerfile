@@ -76,6 +76,9 @@ RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
+    mkdir -p /etc/pki/scripts && \
+    cp -r test/cert-scripts/* /etc/pki/scripts/ && \
+    chmod +x /etc/pki/scripts/*.sh && \
     cd .. && rm -rf /opt/rdk-cert-config
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/

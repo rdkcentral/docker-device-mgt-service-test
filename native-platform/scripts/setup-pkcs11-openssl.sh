@@ -32,7 +32,7 @@ fi
 if [ ! -d "$OPENSSL_DIR" ]; then
     echo "[setup-pkcs11-openssl] Downloading OpenSSL ${OPENSSL_VERSION}..."
     cd /opt
-    wget -q https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
+    wget --no-check-certificate -q https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
     if [ $? -ne 0 ]; then
         echo "[setup-pkcs11-openssl] ERROR: Failed to download OpenSSL"
         exit 1
@@ -66,7 +66,8 @@ echo "[setup-pkcs11-openssl] Configuring OpenSSL..."
 ./config --prefix=${INSTALL_PREFIX} \
          --openssldir=/etc/ssl \
          shared \
-         zlib
+         zlib \
+         -Wl,-rpath,/usr/local/lib64
 
 echo "[setup-pkcs11-openssl] Building OpenSSL (this may take 5-10 minutes)..."
 make -j$(nproc)
@@ -85,6 +86,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Update library cache
+echo "/usr/local/lib64" > /etc/ld.so.conf.d/openssl-local.conf
 ldconfig
 
 # Verify installation
