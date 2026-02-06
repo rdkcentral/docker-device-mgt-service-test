@@ -2,7 +2,7 @@ name: Verify building of test containers
 
 on:
   pull_request:
-    branches: [ "develop" , "topic/RDKE-765" ]
+    branches: [ "develop" ]
 
 env:
     REGISTRY_ROOT: ghcr.io
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
         with:
             repository: 'rdkcentral/common_utilities'
-            ref: '1.5.1'
+            ref: '1.5.2'
             path: 'device-management-service/native-platform/common_utilities'
 
       - name: Check out the dependent rdkcentral/tr69hostif repository
