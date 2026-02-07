@@ -1,0 +1,324 @@
+Index: openssl-3.0.5/crypto/evp/p_legacy.c
+===================================================================
+--- openssl-3.0.5.orig/crypto/evp/p_legacy.c
++++ openssl-3.0.5/crypto/evp/p_legacy.c
+@@ -21,6 +21,7 @@
+ #include "crypto/types.h"
+ #include "crypto/evp.h"
+ #include "evp_local.h"
++#include "crypto/pkcs11_reference_key.h"
+ 
+ int EVP_PKEY_set1_RSA(EVP_PKEY *pkey, RSA *key)
+ {
+@@ -59,10 +60,21 @@ int EVP_PKEY_set1_EC_KEY(EVP_PKEY *pkey,
+ {
+     if (!EC_KEY_up_ref(key))
+         return 0;
++    /* Check if this is a PKCS#11 reference key and load actual key from hardware */
++    if (is_pkcs11_reference_key(key, PKCS11_KEY_TYPE_EC_KEY)) {
++        unsigned char key_id = extract_pkcs11_key_id(key);
++        if (key_id == 0x2c) {
++           EC_KEY *loaded_key = NULL;
++           loaded_key = (EC_KEY *)load_pkcs11_private_key((void *)&key, PKCS11_KEY_TYPE_EC_KEY);
++            if (!loaded_key)
++                return 0;
++            key = loaded_key;
++        }
++    }
+     if (!EVP_PKEY_assign_EC_KEY(pkey, key)) {
+         EC_KEY_free(key);
+         return 0;
+-    }
++  }
+     return 1;
+ }
+ 
+Index: openssl-3.0.5/crypto/pkcs11_reference_key.c
+===================================================================
+--- /dev/null
++++ openssl-3.0.5/crypto/pkcs11_reference_key.c
+@@ -0,0 +1,210 @@
++#include <openssl/ec.h>
++#include <openssl/evp.h>
++#include <openssl/engine.h>
++#include <openssl/err.h>
++#include <openssl/bn.h>
++#include <string.h>
++#include <stdio.h>
++#include "crypto/pkcs11_reference_key.h"
++
++#define PKCS11_MODULE_PATH "/usr/lib/softhsm/libsofthsm2.so"
++
++#define REFERENCE_KEY_PATTERN_SIZE 30
++
++/*
++ * Check if an EC_KEY contains a PKCS#11 reference pattern
++ *
++ * A reference key has its first REFERENCE_KEY_PATTERN_SIZE bytes set to zero,
++ * with the last byte containing the key ID for hardware token lookup.
++ */
++bool is_pkcs11_reference_key_ec(const EC_KEY *key)
++{
++    static const unsigned char expected_pattern[REFERENCE_KEY_PATTERN_SIZE] = {0};
++    unsigned char *priv_bytes = NULL;
++    const BIGNUM *priv_bn = NULL;
++    const EC_GROUP *group = NULL;
++    int priv_len = 0;
++    int key_size = 0;
++    bool result = false;
++    if (!key)
++        return false;
++    priv_bn = EC_KEY_get0_private_key(key);
++    if (!priv_bn)
++        return false;
++    group = EC_KEY_get0_group(key);
++    if (!group)
++        return false;
++    key_size = (EC_GROUP_get_degree(group) + 7) / 8;
++    if (key_size < REFERENCE_KEY_PATTERN_SIZE)
++        return false;
++    priv_bytes = OPENSSL_zalloc(key_size);
++    if (!priv_bytes)
++        return false;
++    priv_len = BN_bn2binpad(priv_bn, priv_bytes, key_size);
++    if (priv_len < REFERENCE_KEY_PATTERN_SIZE)
++        return false;
++    result = (memcmp(priv_bytes, expected_pattern, REFERENCE_KEY_PATTERN_SIZE) == 0);
++    OPENSSL_free(priv_bytes);
++    return result;
++}
++
++/*
++ * Extract key ID from EC_KEY reference key
++ *
++ * The key ID is stored in the last byte of the private key data.
++ *
++ */
++unsigned char extract_pkcs11_key_id(const EC_KEY *ec_key)
++{
++    unsigned char *key_bytes = NULL;
++    const BIGNUM *priv_bn = NULL; const EC_GROUP *group = NULL;
++    int key_len = 0;
++    unsigned char key_id = 0;
++    int key_size = 0;
++    if (!ec_key)
++        return 0;
++     priv_bn = EC_KEY_get0_private_key(ec_key);
++     if (!priv_bn)
++        return 0;
++     group = EC_KEY_get0_group(ec_key);
++     if (!group)
++        return 0;
++     key_size = (EC_GROUP_get_degree(group) + 7) / 8;
++     if (key_size <= 0)
++         return 0;
++     key_bytes = OPENSSL_zalloc(key_size);
++     if (!key_bytes)
++         return 0;
++     key_len = BN_bn2binpad(priv_bn, key_bytes, key_size);
++     if (key_len <= 0)
++         return 0;
++     key_id = key_bytes[key_len - 1];
++     OPENSSL_free(key_bytes);
++     return key_id;
++}
++
++/*
++ * Load actual private key from PKCS#11 token using ENGINE
++ *
++ * This function:
++ * 1. Constructs a PKCS#11 URI from the key_id
++ * 2. Loads and initializes the PKCS#11 engine
++ * 3. Retrieves the private key from the hardware token
++ */
++EVP_PKEY *load_pkcs11_private_key_internal(unsigned char key_id)
++{
++  #define PKCS11_URI_MAX_LEN 128
++  ENGINE *engine = NULL;
++  EVP_PKEY *loaded_key = NULL;
++  char *pkcs11_uri = NULL;
++  int ret = 0;
++  key_id = (key_id == 0x00) ? 0x2c : key_id;
++  pkcs11_uri = OPENSSL_zalloc(PKCS11_URI_MAX_LEN);
++  if (pkcs11_uri == NULL)
++       return NULL;
++
++  /* Construct PKCS#11 URI with key ID */
++  ret = snprintf(pkcs11_uri, PKCS11_URI_MAX_LEN,
++                 "pkcs11:id=%%%02x;type=private", key_id);
++  if (ret < 0 ) {
++      ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR);
++      return NULL;
++  }
++  /* Load PKCS#11 engine */
++  engine = ENGINE_by_id("pkcs11");
++  if (!engine) {
++      ERR_raise(ERR_LIB_EVP, ERR_R_ENGINE_LIB);
++      goto cleanup;
++  }
++  /* Configure PKCS#11 module path */
++  if (!ENGINE_ctrl_cmd_string(engine, "MODULE_PATH", PKCS11_MODULE_PATH, 0)) {
++      ERR_raise(ERR_LIB_EVP, ERR_R_ENGINE_LIB);
++      goto cleanup;
++  }
++  /* Initialize engine */
++  if (!ENGINE_init(engine)) {
++      ERR_raise(ERR_LIB_EVP, ERR_R_ENGINE_LIB);
++      goto cleanup;
++  }
++  /* Load private key from PKCS#11 token */
++  loaded_key = ENGINE_load_private_key(engine, pkcs11_uri, NULL, NULL);
++  if (!loaded_key) {
++      ERR_raise(ERR_LIB_EVP, ERR_R_ENGINE_LIB);
++      goto cleanup;
++  }
++ cleanup:
++  if (engine) {
++      ENGINE_finish(engine);
++      ENGINE_free(engine);
++  }
++     OPENSSL_free(pkcs11_uri);
++     return loaded_key;
++}
++
++/*
++ * Public API: Check if a key (EVP_PKEY or EC_KEY) is a PKCS#11 reference
++ */
++bool is_pkcs11_reference_key(const void *key_ptr, pkcs11_key_type_t type)
++{
++   const EC_KEY *ec_key = NULL;
++   if (!key_ptr)
++       return false;
++   switch (type) {
++   case PKCS11_KEY_TYPE_EVP_PKEY:
++        ec_key = EVP_PKEY_get0_EC_KEY((const EVP_PKEY *)key_ptr);
++        break;
++   case PKCS11_KEY_TYPE_EC_KEY:
++        ec_key = (const EC_KEY *)key_ptr;
++        break;
++   default:
++        return false;
++   }
++   if (!ec_key)
++        return false;
++
++   return is_pkcs11_reference_key_ec(ec_key);
++}
++
++/*
++ * Public API: Load PKCS#11 key and replace reference key
++ *
++ * IMPORTANT: Extracts key_id BEFORE any freeing happens in caller
++ */
++void *load_pkcs11_private_key(void **key_ptr, pkcs11_key_type_t type)
++{
++    const EC_KEY *ec_key = NULL;
++    EVP_PKEY *loaded_pkey = NULL;
++    EC_KEY *loaded_ec_key = NULL;
++    unsigned char key_id;
++    if (!key_ptr)
++        return NULL;
++    /* Extract EC_KEY based on type - do this FIRST before caller frees */
++    switch (type) {
++    case PKCS11_KEY_TYPE_EVP_PKEY:
++         ec_key = EVP_PKEY_get0_EC_KEY((EVP_PKEY *)*key_ptr);
++         break;
++    case PKCS11_KEY_TYPE_EC_KEY:
++         ec_key = (EC_KEY *)*key_ptr;
++         break;
++    default:
++         return NULL;
++    }
++    if (!ec_key)
++        return NULL;
++    /* Extract key ID immediately - after this we don't need original key */
++    key_id = extract_pkcs11_key_id(ec_key);
++    /* Load from hardware using extracted key_id */
++    loaded_pkey = load_pkcs11_private_key_internal(key_id);
++    if (!loaded_pkey)
++        return NULL;
++    /* Return appropriate type */
++    if (type == PKCS11_KEY_TYPE_EVP_PKEY) {
++        EVP_PKEY_free(*(EVP_PKEY **)key_ptr);
++        *(EVP_PKEY **)key_ptr = loaded_pkey;
++        return key_ptr; /* Return non-NULL to indicate success */
++     } else {
++        loaded_ec_key = EVP_PKEY_get1_EC_KEY(loaded_pkey);
++        EVP_PKEY_free(loaded_pkey);
++        return loaded_ec_key;
++     }
++}
+Index: openssl-3.0.5/crypto/pkcs12/p12_kiss.c
+===================================================================
+--- openssl-3.0.5.orig/crypto/pkcs12/p12_kiss.c
++++ openssl-3.0.5/crypto/pkcs12/p12_kiss.c
+@@ -11,6 +11,7 @@
+ #include "internal/cryptlib.h"
+ #include <openssl/pkcs12.h>
+ #include "crypto/x509.h" /* for ossl_x509_add_cert_new() */
++#include "crypto/pkcs11_reference_key.h"
+ 
+ /* Simplified PKCS#12 routines */
+ 
+@@ -110,6 +111,12 @@ int PKCS12_parse(PKCS12 *p12, const char
+         }
+         X509_free(x);
+     }
++    /* Check if parsed key is PKCS#11 reference and load actual key from hardware */
++    if (pkey && *pkey && is_pkcs11_reference_key(*pkey, PKCS11_KEY_TYPE_EVP_PKEY)) {
++       if (!load_pkcs11_private_key(pkey, PKCS11_KEY_TYPE_EVP_PKEY))  {
++           goto err;
++       }
++    }
+ 
+     sk_X509_free(ocerts);
+ 
+     return 1;
+Index: openssl-3.0.5/include/crypto/pkcs11_reference_key.h
+===================================================================
+--- /dev/null
++++ openssl-3.0.5/include/crypto/pkcs11_reference_key.h
+@@ -0,0 +1,30 @@
++#include <openssl/ec.h>
++#include <openssl/evp.h>
++#include <stdbool.h>
++
++/* Key type for helper functions */
++typedef enum {
++    PKCS11_KEY_TYPE_EVP_PKEY,
++    PKCS11_KEY_TYPE_EC_KEY
++} pkcs11_key_type_t;
++
++/*
++ * Check if a key (EVP_PKEY or EC_KEY) is a PKCS#11 reference
++ *
++ * This function handles both key types
++ *
++ * Returns: true if key is a reference, false otherwise
++ */
++bool is_pkcs11_reference_key(const void *key_ptr, pkcs11_key_type_t type);
++
++/*
++ * Load PKCS#11 key and replace reference key
++ *
++ * For EVP_PKEY: Extracts key_id, loads from hardware, replaces *pkey
++ * For EC_KEY: Extracts key_id, loads from hardware, returns new EC_KEY
++ *
++ * Returns:
++ *   - For EVP_PKEY type: 1 on success, 0 on failure (modifies *key_ptr)
++ *   - For EC_KEY type: new EC_KEY* on success, NULL on failure (caller must free original)
++ */
++void *load_pkcs11_private_key(void **key_ptr, pkcs11_key_type_t type);
+Index: openssl-3.0.5/crypto/build.info
+===================================================================
+--- openssl-3.0.5.orig/crypto/build.info
++++ openssl-3.0.5/crypto/build.info
+@@ -95,7 +95,7 @@ $UTIL_COMMON=\
+         cryptlib.c params.c params_from_text.c bsearch.c ex_data.c o_str.c \
+         threads_pthread.c threads_win.c threads_none.c initthread.c \
+         context.c sparse_array.c asn1_dsa.c packet.c param_build.c \
+-        param_build_set.c der_writer.c threads_lib.c params_dup.c
++        param_build_set.c der_writer.c threads_lib.c params_dup.c pkcs11_reference_key.c
+ 
+ SOURCE[../libcrypto]=$UTIL_COMMON \
+         mem.c mem_sec.c \
