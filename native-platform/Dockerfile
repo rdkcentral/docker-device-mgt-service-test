@@ -87,8 +87,9 @@ RUN chmod +x /opt/dependent_rdk_pkg_installer.sh && /opt/dependent_rdk_pkg_insta
 RUN rm -rf /opt/dependent_rdk_pkg_installer.sh
 
 COPY rdk_logger /opt/rdk_logger
-RUN cd /opt/rdk_logger && autoreconf --install && ./configure && make && make install
-RUN rm -rf /opt/rdk_logger
+COPY rdk_logger_rollingfile.patch /opt/rdk_logger_rollingfile.patch
+RUN cd /opt/rdk_logger && patch -p1 < /opt/rdk_logger_rollingfile.patch && autoreconf --install && ./configure --sysconfdir=/etc && make && make install
+RUN rm -rf /opt/rdk_logger /opt/rdk_logger_rollingfile.patch
 COPY debug.ini /etc/debug.ini
 COPY log4crc /etc/log4crc
 
