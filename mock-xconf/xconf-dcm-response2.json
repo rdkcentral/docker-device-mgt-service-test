@@ -30,7 +30,7 @@
                 "header":"IUI_accum",
                 "content":"Device.DeviceInfo.X_RDKCENTRAL-COM.IUI.Version",
                 "type":"<message_bus>",
-                "pollingFrequency":"0"
+                "pollingFrequency":"1"
             },
             {
                 "header": "SYS_GREP_TEST",
