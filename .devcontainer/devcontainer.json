@@ -1,0 +1,15 @@
+{
+	"name": "RDK Native Platform",
+	"dockerComposeFile": "../compose.yaml",
+	"service": "l2-container",
+	"workspaceFolder": "/mnt/L2_CONTAINER_SHARED_VOLUME",
+	"shutdownAction": "none",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack"
+			]
+		}
+	}
+}

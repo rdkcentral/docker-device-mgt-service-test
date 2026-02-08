@@ -24,6 +24,25 @@ export RBUS_INSTALL_DIR=/usr/local
 export PATH=${RBUS_INSTALL_DIR}/bin:${PATH}
 export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 
+# Set log4c configuration path for RDK logger
+export LOG4C_RCPATH=/etc
+
+# Start rsyslog daemon for log management
+echo "[entrypoint] Starting rsyslog daemon..."
+rsyslogd
+if [ $? -eq 0 ]; then
+    echo "[entrypoint] rsyslog daemon started successfully"
+    # Verify rsyslog is running
+    sleep 1
+    if pgrep -x rsyslogd > /dev/null; then
+        echo "[entrypoint] rsyslog daemon confirmed running (PID: $(pgrep -x rsyslogd))"
+    else
+        echo "[entrypoint] WARNING: rsyslog daemon process not found"
+    fi
+else
+    echo "[entrypoint] WARNING: rsyslog daemon failed to start with exit code $?"
+fi
+
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 
@@ -46,7 +65,7 @@ rm -fr /tmp/rtroute*
 rtrouted -l DEBUG 
 
 /usr/local/bin/rfc_provider &
-/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -d /etc/debug.ini -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
+/usr/local/bin/tr69hostif -c /etc/mgrlist.conf -p 10999 -s 11999 | tee /opt/logs/tr69hostIf.log.0 &
 
 /bin/bash
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
