@@ -5,6 +5,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 # This must be a release tag derived from a github relase event context
 ARG REVISION=0.0.0
 
+# Set log4c configuration path for RDK logger
+ENV LOG4C_RCPATH=/etc
+
 # Add instructions to install autotools
 RUN apt-get update && apt-get install -y build-essential \
           wget openssl tar vim git git-lfs
@@ -21,6 +24,9 @@ RUN apt-get install -y libgtest-dev libgmock-dev libjansson-dev libbsd-dev tcl-d
           iproute2 nmap netcat
 
 RUN apt-get update && apt-get install -y gdb valgrind lcov g++ wget gperf curl
+
+# Install rsyslog for log management
+RUN apt-get update && apt-get install -y rsyslog
 
 RUN apt-get update && apt-get install -y libjsonrpccpp-dev
 # Add busybox support
@@ -87,11 +93,19 @@ RUN chmod +x /opt/dependent_rdk_pkg_installer.sh && /opt/dependent_rdk_pkg_insta
 RUN rm -rf /opt/dependent_rdk_pkg_installer.sh
 
 COPY rdk_logger /opt/rdk_logger
-COPY rdk_logger_rollingfile.patch /opt/rdk_logger_rollingfile.patch
-RUN cd /opt/rdk_logger && patch -p1 < /opt/rdk_logger_rollingfile.patch && autoreconf --install && ./configure --sysconfdir=/etc && make && make install
-RUN rm -rf /opt/rdk_logger /opt/rdk_logger_rollingfile.patch
-COPY debug.ini /etc/debug.ini
+RUN cd /opt/rdk_logger && autoreconf --install && ./configure --sysconfdir=/etc && make && make install
+RUN rm -rf /opt/rdk_logger
+
+# Ensure log directory exists with correct permissions
+# Make it writable by rsyslog user (which runs as non-root)
+RUN mkdir -p /opt/logs && chmod 777 /opt/logs
+
+# Configure rsyslog for RDK logger
+COPY rdklogger.conf /etc/rsyslog.d/rdklogger.conf
 COPY log4crc /etc/log4crc
+RUN chmod 644 /etc/rsyslog.d/rdklogger.conf
+
+COPY debug.ini /etc/debug.ini
 
 COPY WebconfigFramework /opt/WebconfigFramework
 RUN cd /opt/WebconfigFramework && export INSTALL_DIR='/usr/local'&& \

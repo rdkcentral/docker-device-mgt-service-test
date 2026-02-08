@@ -27,6 +27,22 @@ export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 # Set log4c configuration path for RDK logger
 export LOG4C_RCPATH=/etc
 
+# Start rsyslog daemon for log management
+echo "[entrypoint] Starting rsyslog daemon..."
+rsyslogd
+if [ $? -eq 0 ]; then
+    echo "[entrypoint] rsyslog daemon started successfully"
+    # Verify rsyslog is running
+    sleep 1
+    if pgrep -x rsyslogd > /dev/null; then
+        echo "[entrypoint] rsyslog daemon confirmed running (PID: $(pgrep -x rsyslogd))"
+    else
+        echo "[entrypoint] WARNING: rsyslog daemon process not found"
+    fi
+else
+    echo "[entrypoint] WARNING: rsyslog daemon failed to start with exit code $?"
+fi
+
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 

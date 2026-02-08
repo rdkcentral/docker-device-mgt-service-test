@@ -1,65 +1,20 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE log4c SYSTEM "">
+<log4c>
 
-<log4c version="1.2.4">
+    <config>
+        <bufsize>1024</bufsize>
+        <debug level="0"/>
+        <nocleanup>0</nocleanup>
+        <reread>0</reread>
+    </config>
 
-        <config>
-                <bufsize>0</bufsize>
-                <debug level="7"/>
-                <nocleanup>0</nocleanup>
-                <reread>1</reread>
-        </config>
+    <layout name="rdk_plaintext"            type="format_plaintext"/>
+    <layout name="rdk_with_ts"              type="format_with_ts"/>
+    <layout name="rdk_detail_with_ts"       type="format_detail_with_ts"/>
+    <layout name="rdk_detail_without_ts"    type="format_detail_without_ts"/>
 
-        <layout name="rdk_with_ts" type="format_with_ts"/>
+    <appender name="rdk_console" type="to_console" layout="rdk_detail_with_ts"/>
+    <appender name="rdk_syslog"  type="to_syslog"  layout="rdk_detail_without_ts"/>
+    <appender name="rdk_journal" type="to_journal" layout="rdk_plaintext"/>
 
-        <rollingpolicy name="myrollingpolicy" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_T2rollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="telemetry2_0.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicy" />
-        <category name="LOG.RDK.T2" priority="debug" appender="RI_T2rollingfileappender"/>
-        <rollingpolicy name="myrollingpolicyfwdl" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_fwdlrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="swupdate.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicyfwdl" />
-        <category name="LOG.RDK.FWUPG" priority="debug" appender="RI_fwdlrollingfileappender"/>
-  
-        <rollingpolicy name="myrollingpolicyrfcmgr" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_RFCMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicyrfcmgr" />
-        <category name="LOG.RDK.RFCMGR" priority="debug" appender="RI_RFCMGRrollingfileappender"/>
-
-        <rollingpolicy name="myrollingpolicyremotedebugger" type="sizewin" maxsize="50485760" maxnum="10" />
-        <appender name="RI_REMOTEDEBUGGERrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="remotedebugger.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicyremotedebugger" />
-	<category name="LOG.RDK.REMOTEDEBUGGER" priority="debug" appender="RI_REMOTEDEBUGGERrollingfileappender"/>
-
-        <rollingpolicy name="myrollingpolicylogupload" type="sizewin" maxsize="50485760" maxnum="10" />
-        <appender name="RI_UPLOADSTBrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logupload.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicylogupload" />
-	<category name="LOG.RDK.UPLOADSTB" priority="debug" appender="RI_UPLOADSTBrollingfileappender"/>
-
-        <rollingpolicy name="myrollingpolicycommonutil" type="sizewin" maxsize="50485760" maxnum="10" />
-        <appender name="RI_COMMONUTILITIESrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="logcommon.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicycommonutil" />
-        <category name="LOG.RDK.COMMONUTILITIES" priority="debug" appender="RI_COMMONUTILITIESrollingfileappender"/>
-
-        <rollingpolicy name="myrollingpolicyrfcapi" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_RFCAPIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicyrfcapi" />
-        <category name="LOG.RDK.RFCAPI" priority="debug" appender="RI_RFCAPIrollingfileappender"/>
-	
-        <rollingpolicy name="myrollingpolicytr181api" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_TR181APIrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rfcscript.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicytr181api" />
-        <category name="LOG.RDK.TR181API" priority="debug" appender="RI_TR181APIrollingfileappender"/>
-
-        <rollingpolicy name="myrollingpolicytr69hostif" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_TR69HOSTIFrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="tr69hostif.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicytr69hostif" />
-	<category name="LOG.RDK.TR69HOSTIF" priority="debug" appender="RI_TR69HOSTIFrollingfileappender"/>
-
-	<rollingpolicy name="myrollingpolicysystimemgr" type="sizewin" maxsize="10485760" maxnum="10" />
-	<appender name="RI_SYSTIMEMGRrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="systimemgr.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicysystimemgr" />
-	<category name="LOG.RDK.SYSTIMEMGR" priority="debug" appender="RI_SYSTIMEMGRrollingfileappender"/>
-
-	<rollingpolicy name="myrollingpolicydcmagent" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_DCMAGENTrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="dcmd.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicydcmagent" />
-        <category name="LOG.RDK.DCM" priority="debug" appender="RI_DCMAGENTrollingfileappender"/>
-
-	<rollingpolicy name="myrollingpolicyrdmagent" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_RDMAGENTrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="rdm_status.log" layout="rdk_with_ts" rollingpolicy="myrollingpolicyrdmagent" />
-        <category name="LOG.RDK.RDMAGENT" priority="debug" appender="RI_RDMAGENTrollingfileappender"/>
-
-	<rollingpolicy name="myrollingpolicycrashupload" type="sizewin" maxsize="10485760" maxnum="10" />
-        <appender name="RI_CRASHUPLOADrollingfileappender" type="rollingfile" logdir="/opt/logs" prefix="core_log.txt" layout="rdk_with_ts" rollingpolicy="myrollingpolicycrashupload" />
-        <category name="LOG.RDK.CRASHUPLOAD" priority="debug" appender="RI_CRASHUPLOADrollingfileappender"/>
+    <category name="LOG.RDK" priority="debug" appender="rdk_syslog"/>
 </log4c>
