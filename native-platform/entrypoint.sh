@@ -60,15 +60,7 @@ if [ "$ENABLE_MTLS" = "true" ] && [ "$ENABLE_PKCS11" = "true" ]; then
         echo "[entrypoint] WARNING: PKCS#11 token initialization failed"
     fi
     
-    # Import certificates if available
-    if [ -f "/opt/certs/client.p12" ] || [ -f "/opt/certs/reference.p12" ]; then
-        /usr/local/bin/import-certs-to-pkcs11.sh
-        echo "[entrypoint] Certificates imported to PKCS#11"
-    else
-        echo "[entrypoint] No P12 files found in /opt/certs, skipping PKCS#11 import"
-    fi
-    
-    echo "[entrypoint] PKCS#11 initialization complete"
+    echo "[entrypoint] PKCS#11 token initialization complete (certificate import will happen after mTLS cert generation)"
 elif [ "$ENABLE_MTLS" = "true" ]; then
     echo "[entrypoint] ENABLE_MTLS=true (standard mTLS without PKCS#11)"
 elif [ "$ENABLE_PKCS11" = "true" ]; then
@@ -82,6 +74,21 @@ CERTS_RC=$?
 if [ "$CERTS_RC" -ne 0 ]; then
     echo "[entrypoint] Certificate setup failed with exit code $CERTS_RC; aborting startup."
     exit "$CERTS_RC"
+fi
+
+# Import P12 certificates to PKCS#11 token (after cert generation)
+if [ "$ENABLE_MTLS" = "true" ] && [ "$ENABLE_PKCS11" = "true" ]; then
+    echo "[entrypoint] Importing certificates to PKCS#11 token..."
+    if [ -f "/opt/certs/client.p12" ] || [ -f "/opt/certs/reference.p12" ]; then
+        /usr/local/bin/import-certs-to-pkcs11.sh
+        if [ $? -eq 0 ]; then
+            echo "[entrypoint] ✓ Certificates imported to PKCS#11 token"
+        else
+            echo "[entrypoint] WARNING: PKCS#11 certificate import failed"
+        fi
+    else
+        echo "[entrypoint] WARNING: No P12 files found in /opt/certs, skipping PKCS#11 import"
+    fi
 fi
 
 # Build and install RFC parameter provider and tr69hostif
