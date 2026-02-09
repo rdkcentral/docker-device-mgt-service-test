@@ -89,7 +89,6 @@ RUN rm -rf /opt/dependent_rdk_pkg_installer.sh
 COPY rdk_logger /opt/rdk_logger
 RUN cd /opt/rdk_logger && autoreconf --install && ./configure && make && make install
 RUN rm -rf /opt/rdk_logger
-COPY debug.ini /etc/debug.ini
 COPY log4crc /etc/log4crc
 
 COPY WebconfigFramework /opt/WebconfigFramework
