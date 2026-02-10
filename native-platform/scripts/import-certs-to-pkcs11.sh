@@ -19,8 +19,8 @@ if [ ! -f "$PKCS11_MODULE" ]; then
     exit 1
 fi
 
-# Get token slot
-SLOT=$(softhsm2-util --show-slots | grep -A 2 "$TOKEN_LABEL" | grep "Slot " | awk '{print $2}')
+# Get token slot by searching for the label and extracting the slot number before it
+SLOT=$(softhsm2-util --show-slots | grep -B 20 "Label:.*$TOKEN_LABEL" | grep "^Slot " | head -1 | awk '{print $2}')
 if [ -z "$SLOT" ]; then
     echo "[import-certs-to-pkcs11] ERROR: Token '$TOKEN_LABEL' not found"
     exit 1

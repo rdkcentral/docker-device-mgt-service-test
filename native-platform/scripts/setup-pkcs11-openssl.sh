@@ -89,6 +89,11 @@ fi
 echo "/usr/local/lib64" > /etc/ld.so.conf.d/openssl-local.conf
 ldconfig
 
+# Create symlink for PKCS#11 engine (OpenSSL looks in ENGINESDIR=/usr/local/lib64/engines-3)
+echo "[setup-pkcs11-openssl] Creating PKCS#11 engine symlink..."
+mkdir -p /usr/local/lib64/engines-3
+ln -sf /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+
 # Verify installation
 FINAL_VERSION=$(${INSTALL_PREFIX}/bin/openssl version 2>/dev/null | awk '{print $2}')
 if [ "$FINAL_VERSION" = "$OPENSSL_VERSION" ]; then

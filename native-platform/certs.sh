@@ -103,7 +103,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Copy client CA chain to shared volume for mock-xconf container
     mkdir -p "$SHARED_CERTS_DIR/client"
-    cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    if [ -f "$CLIENT_ICA_CHAIN" ]; then
+        cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    else
+        echo "[certs] WARNING: Client ICA chain not found at $CLIENT_ICA_CHAIN" >&2
+    fi
 
     # Validate shared export exists and is non-empty
     if [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
