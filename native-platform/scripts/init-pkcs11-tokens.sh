@@ -24,10 +24,10 @@ if softhsm2-util --show-slots 2>/dev/null | grep -q "$TOKEN_LABEL"; then
     exit 0
 fi
 
-# Initialize token at slot 0 (fixed slot for consistent PKCS#11 URIs)
-echo "[init-pkcs11-tokens] Creating token '$TOKEN_LABEL' at slot 0..."
+# Initialize token at free slot (SoftHSM assigns slots dynamically)
+echo "[init-pkcs11-tokens] Creating token '$TOKEN_LABEL'..."
 softhsm2-util --init-token \
-    --slot 0 \
+    --free \
     --label "$TOKEN_LABEL" \
     --so-pin "$SO_PIN" \
     --pin "$USER_PIN"
