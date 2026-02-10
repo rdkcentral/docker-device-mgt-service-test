@@ -57,7 +57,7 @@ pkcs11-tool --module "$PKCS11_MODULE" \
     --write-object "$CLIENT_CERT" \
     --type cert \
     --id 01 \
-    --label "RDK_CLIENT_CERT" || echo "Certificate import warning (may already exist)"
+    --label "rdkclient" || echo "Certificate import warning (may already exist)"
 
 # Import private key to PKCS#11 at slot 0x01
 pkcs11-tool --module "$PKCS11_MODULE" \
@@ -66,7 +66,7 @@ pkcs11-tool --module "$PKCS11_MODULE" \
     --write-object "$CLIENT_KEY" \
     --type privkey \
     --id 01 \
-    --label "RDK_CLIENT_KEY" || echo "Key import warning (may already exist)"
+    --label "rdkclient-key" || echo "Key import warning (may already exist)"
 
 echo "[import-certs-to-pkcs11] ✓ client certificate imported to slot 0x01"
 
@@ -84,7 +84,7 @@ if [ -f "$CERT_DIR/reference.p12" ]; then
         --write-object "$CLIENT_KEY" \
         --type privkey \
         --id 2c \
-        --label "RDK_REFERENCE_KEY" || echo "Reference key import warning (may already exist)"
+        --label "rdkclient-p12-key" || echo "Reference key import warning (may already exist)"
     
     echo "[import-certs-to-pkcs11] ✓ Real private key imported to slot 0x2c (for reference.p12 with sentinel key)"
 fi
