@@ -18,16 +18,21 @@ echo "[setup-pkcs11-openssl] Starting OpenSSL ${OPENSSL_VERSION} setup with PKCS
 if [ -f "${INSTALL_PREFIX}/bin/openssl" ]; then
     INSTALLED_VERSION=$(${INSTALL_PREFIX}/bin/openssl version 2>/dev/null | awk '{print $2}')
     if [ "$INSTALLED_VERSION" = "$OPENSSL_VERSION" ]; then
-        echo "[setup-pkcs11-openssl] OpenSSL ${OPENSSL_VERSION} already installed"
-        echo "[setup-pkcs11-openssl] NOTE: System libssl3 remains for system tools, custom OpenSSL in /usr/local for P12 patch"
+        echo "[setup-pkcs11-openssl] OpenSSL ${OPENSSL_VERSION} with PKCS#11 patch already installed"
         exit 0
     else
         echo "[setup-pkcs11-openssl] Found OpenSSL $INSTALLED_VERSION, will replace with $OPENSSL_VERSION"
-        # Remove old version
+        # Remove old version from /usr/local
         rm -f ${INSTALL_PREFIX}/bin/openssl
         rm -f ${INSTALL_PREFIX}/lib/libssl.* ${INSTALL_PREFIX}/lib/libcrypto.*
     fi
 fi
+
+# Remove pre-installed system OpenSSL to avoid conflicts
+echo "[setup-pkcs11-openssl] Removing pre-installed system OpenSSL..."
+apt-get remove -y openssl libssl-dev 2>/dev/null || true
+apt-get autoremove -y 2>/dev/null || true
+echo "[setup-pkcs11-openssl] System OpenSSL removed"
 
 # Download OpenSSL
 if [ ! -d "$OPENSSL_DIR" ]; then
@@ -93,7 +98,24 @@ ldconfig
 # Create symlink for PKCS#11 engine (OpenSSL looks in ENGINESDIR=/usr/local/lib64/engines-3)
 echo "[setup-pkcs11-openssl] Creating PKCS#11 engine symlink..."
 mkdir -p /usr/local/lib64/engines-3
-ln -sf /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+
+# Detect architecture and create appropriate symlink
+if [ -f "/usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so" ]; then
+    ln -sf /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+    echo "[setup-pkcs11-openssl] ✓ PKCS#11 engine linked (aarch64)"
+elif [ -f "/usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so" ]; then
+    ln -sf /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+    echo "[setup-pkcs11-openssl] ✓ PKCS#11 engine linked (x86_64)"
+else
+    echo "[setup-pkcs11-openssl] ✗ WARNING: PKCS#11 engine not found for this architecture"
+fi
+
+# Verify PKCS#11 engine is available
+if ${INSTALL_PREFIX}/bin/openssl engine -t -c pkcs11 2>&1 | grep -q "pkcs11"; then
+    echo "[setup-pkcs11-openssl] ✓ PKCS#11 engine verified and available"
+else
+    echo "[setup-pkcs11-openssl] ✗ WARNING: PKCS#11 engine not detected by OpenSSL"
+fi
 
 # Verify installation
 FINAL_VERSION=$(${INSTALL_PREFIX}/bin/openssl version 2>/dev/null | awk '{print $2}')
