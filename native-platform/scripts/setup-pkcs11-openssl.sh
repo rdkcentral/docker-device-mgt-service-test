@@ -73,6 +73,7 @@ echo "[setup-pkcs11-openssl] Configuring OpenSSL..."
          --openssldir=/etc/ssl \
          shared \
          zlib \
+         -Wl,-rpath,/usr/local/lib \
          -Wl,-rpath,/usr/local/lib64
 
 echo "[setup-pkcs11-openssl] Building OpenSSL (this may take 5-10 minutes)..."
@@ -91,20 +92,27 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Update library cache
-echo "/usr/local/lib64" > /etc/ld.so.conf.d/openssl-local.conf
+# Remove system OpenSSL libraries completely to avoid conflicts
+echo "[setup-pkcs11-openssl] Removing system OpenSSL libraries..."
+rm -f /lib/*/libssl.so* /lib/*/libcrypto.so* /usr/lib/*/libssl.so* /usr/lib/*/libcrypto.so*
+echo "[setup-pkcs11-openssl] ✓ System OpenSSL libraries removed"
+
+# Update library cache - add both lib and lib64 paths
+echo "/usr/local/lib" > /etc/ld.so.conf.d/openssl-local.conf
+echo "/usr/local/lib64" >> /etc/ld.so.conf.d/openssl-local.conf
 ldconfig
+echo "[setup-pkcs11-openssl] ✓ Library cache updated"
 
-# Create symlink for PKCS#11 engine (OpenSSL looks in ENGINESDIR=/usr/local/lib64/engines-3)
+# Create symlink for PKCS#11 engine
+# OpenSSL looks in ENGINESDIR which is /usr/local/lib/engines-3 on this build
 echo "[setup-pkcs11-openssl] Creating PKCS#11 engine symlink..."
-mkdir -p /usr/local/lib64/engines-3
 
-# Detect architecture and create appropriate symlink
+# Detect architecture and create appropriate symlink in the correct engines directory
 if [ -f "/usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so" ]; then
-    ln -sf /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+    ln -sf /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so /usr/local/lib/engines-3/pkcs11.so
     echo "[setup-pkcs11-openssl] ✓ PKCS#11 engine linked (aarch64)"
 elif [ -f "/usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so" ]; then
-    ln -sf /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
+    ln -sf /usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so /usr/local/lib/engines-3/pkcs11.so
     echo "[setup-pkcs11-openssl] ✓ PKCS#11 engine linked (x86_64)"
 else
     echo "[setup-pkcs11-openssl] ✗ WARNING: PKCS#11 engine not found for this architecture"
