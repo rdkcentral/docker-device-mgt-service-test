@@ -43,19 +43,20 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     echo "[certs] Waiting for server certificates..."
     done
 
-    # Copy individual server CA certificates to system trust store
+    # Copy root CA to system trust store
     cp "$SHARED_CERTS_DIR/server/root_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
-    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
+    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
+    
+    # Copy server ICA to shared location for ci-setup-environment.sh to use
+    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/certs
+    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" /mnt/L2_CONTAINER_SHARED_VOLUME/certs/Test-RDK-server-ICA.pem
+    echo "[certs] Server ICA copied to shared volume for CA bundle creation during build"
 
     # Cleanup shared server certs after import
     rm -f "$SHARED_CERTS_DIR/server/root_ca.pem" \
         "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 
-    # Update CA certificates
-    echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf || true
-    echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf || true
-    update-ca-certificates --fresh
+    echo "[certs] Server CA certificates imported"
 else
     echo "[certs] mock-xconf not resolvable (${MOCKXCONF_HOST}); skipping server CA import"
 fi
