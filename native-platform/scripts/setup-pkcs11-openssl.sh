@@ -19,6 +19,7 @@ if [ -f "${INSTALL_PREFIX}/bin/openssl" ]; then
     INSTALLED_VERSION=$(${INSTALL_PREFIX}/bin/openssl version 2>/dev/null | awk '{print $2}')
     if [ "$INSTALLED_VERSION" = "$OPENSSL_VERSION" ]; then
         echo "[setup-pkcs11-openssl] OpenSSL ${OPENSSL_VERSION} already installed"
+        echo "[setup-pkcs11-openssl] NOTE: System libssl3 remains for system tools, custom OpenSSL in /usr/local for P12 patch"
         exit 0
     else
         echo "[setup-pkcs11-openssl] Found OpenSSL $INSTALLED_VERSION, will replace with $OPENSSL_VERSION"
