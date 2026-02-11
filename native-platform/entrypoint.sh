@@ -36,20 +36,21 @@ if [ "$ENABLE_MTLS" = "true" ] && [ "$ENABLE_PKCS11" = "true" ]; then
     echo "[entrypoint] ENABLE_MTLS=true and ENABLE_PKCS11=true detected"
     echo "[entrypoint] Initializing PKCS#11 tokens for mTLS..."
     
-    # Setup OpenSSL 3.0.5 with PKCS#11 patch (runtime compilation, one-time cached)
+    # Setup OpenSSL 3.0.5 with PKCS#11 patch
+    # With Dockerfile pre-building, this should detect it's already built
     if [ ! -f "/usr/local/openssl-pkcs11-ready" ]; then
-        echo "[entrypoint] Building OpenSSL 3.0.5 with PKCS#11 patch (first run only)..."
+        echo "[entrypoint] Checking OpenSSL 3.0.5 with PKCS#11 patch..."
         /usr/local/bin/setup-pkcs11-openssl.sh
         if [ $? -eq 0 ]; then
             touch /usr/local/openssl-pkcs11-ready
-            echo "[entrypoint] OpenSSL 3.0.5 with PKCS#11 patch installed successfully"
+            echo "[entrypoint] OpenSSL 3.0.5 with PKCS#11 patch ready"
         else
             echo "[entrypoint] ERROR: PKCS#11 OpenSSL setup failed"
             exit 1
         fi
     else
         OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
-        echo "[entrypoint] OpenSSL 3.0.5 with PKCS#11 patch already installed (cached)"
+        echo "[entrypoint] OpenSSL 3.0.5 with PKCS#11 patch already ready (cached)"
     fi
     
     # Initialize PKCS#11 tokens

@@ -151,46 +151,19 @@ RUN mkdir -p /var/lib/softhsm/tokens && \
     chmod 755 /var/lib/softhsm/tokens
 
 # Copy PKCS#11 setup scripts and patch
+# OpenSSL 3.0.5 will be compiled at runtime if ENABLE_PKCS11=true
+COPY scripts/setup-pkcs11-openssl.sh /usr/local/bin/
 COPY scripts/init-pkcs11-tokens.sh /usr/local/bin/
 COPY scripts/import-certs-to-pkcs11.sh /usr/local/bin/
 COPY scripts/softhsm2.conf /etc/softhsm2.conf
 COPY patches/pkcs11_migration_support_p12.patch /opt/patches/
 
-RUN chmod +x /usr/local/bin/init-pkcs11-tokens.sh \
+RUN chmod +x /usr/local/bin/setup-pkcs11-openssl.sh \
+             /usr/local/bin/init-pkcs11-tokens.sh \
              /usr/local/bin/import-certs-to-pkcs11.sh
 
 # Environment variable for PKCS#11
 ENV SOFTHSM2_CONF=/etc/softhsm2.conf
-
-# ============================================================================
-# Build and Install OpenSSL 3.0.5 with PKCS#11 P12 Migration Patch
-# This aligns with the working production setup (ci-setup-environment.sh)
-# ============================================================================
-
-# Remove pre-installed OpenSSL (permanent removal like production)
-RUN apt-get remove -y openssl libssl-dev || true && \
-    apt-get autoremove -y || true
-
-# Download, patch, build, and install OpenSSL 3.0.5
-RUN cd /tmp && \
-    wget --no-check-certificate https://www.openssl.org/source/openssl-3.0.5.tar.gz && \
-    tar -xzf openssl-3.0.5.tar.gz && \
-    cd openssl-3.0.5 && \
-    patch -p1 < /opt/patches/pkcs11_migration_support_p12.patch && \
-    ./config --prefix=/usr/local --openssldir=/usr/local/ssl shared && \
-    make -j$(nproc) && \
-    make install && \
-    ldconfig && \
-    cd /tmp && \
-    rm -rf openssl-3.0.5 openssl-3.0.5.tar.gz
-
-# Link PKCS#11 Engine for aarch64 architecture
-RUN mkdir -p /usr/local/lib64/engines-3 && \
-    ln -sf /usr/lib/aarch64-linux-gnu/engines-3/pkcs11.so /usr/local/lib64/engines-3/pkcs11.so
-
-# Set environment for patched OpenSSL
-ENV PATH=/usr/local/bin:$PATH
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH
 
 # Trim down the docker image size
 RUN apt-get remove -y software-properties-common
@@ -269,9 +242,8 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 COPY certs.sh /usr/local/bin/certs.sh
 RUN chmod +x /usr/local/bin/certs.sh
-RUN echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
-# Updated to use aarch64 and prioritize custom OpenSSL libraries
-RUN echo 'export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH' >> ~/.bashrc
+RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
+RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 
 # Set the entry point command
 #CMD ["/bin/bash"]
