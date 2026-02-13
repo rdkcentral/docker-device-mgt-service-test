@@ -145,7 +145,7 @@ Index: openssl-3.0.5/crypto/pkcs11_reference_key.c
 +
 +  /* Construct PKCS#11 URI with key ID */
 +  ret = snprintf(pkcs11_uri, PKCS11_URI_MAX_LEN,
-+                 "pkcs11:token=RDK_TOKEN;id=%%%02x;type=private", key_id);
++                 "pkcs11:id=%%%02x;type=private", key_id);
 +  if (ret < 0 ) {
 +      ERR_raise(ERR_LIB_EVP, ERR_R_INTERNAL_ERROR);
 +      return NULL;

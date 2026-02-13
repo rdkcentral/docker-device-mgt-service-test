@@ -70,23 +70,30 @@ pkcs11-tool --module "$PKCS11_MODULE" \
 
 echo "[import-certs-to-pkcs11] ✓ client certificate imported to slot 0x01"
 
-# Import the REAL private key to slot 0x2c for P12 patch testing
-# The reference.p12 contains the same cert with sentinel key (all zeros)
-# When OpenSSL detects sentinel key in reference.p12, it will fetch ONLY the private key from slot 0x2c
-# The certificate is used from reference.p12 itself (no need to store cert at 0x2c)
+# Import BOTH certificate and private key to slot 0x2c for P12 patch testing
+# The reference.p12 uses sentinel key that redirects to this slot
 if [ -f "$CERT_DIR/reference.p12" ]; then
-    echo "[import-certs-to-pkcs11] Importing REAL private key to slot 0x2c for P12 patch testing..."
+    echo "[import-certs-to-pkcs11] Importing certificate and private key to slot 0x2c for P12 patch testing..."
     
-    # Import ONLY the private key to slot 0x2c (cert not needed, patch only loads private key)
+    # Import certificate to slot 0x2c
+    pkcs11-tool --module "$PKCS11_MODULE" \
+        --slot "$SLOT" \
+        --login --pin "$USER_PIN" \
+        --write-object "$CLIENT_CERT" \
+        --type cert \
+        --id 2c \
+        --label "rdkclient-p12" || echo "Certificate import warning (may already exist)"
+    
+    # Import private key to slot 0x2c
     pkcs11-tool --module "$PKCS11_MODULE" \
         --slot "$SLOT" \
         --login --pin "$USER_PIN" \
         --write-object "$CLIENT_KEY" \
         --type privkey \
         --id 2c \
-        --label "rdkclient-p12-key" || echo "Reference key import warning (may already exist)"
+        --label "rdkclient-p12-key" || echo "Private key import warning (may already exist)"
     
-    echo "[import-certs-to-pkcs11] ✓ Real private key imported to slot 0x2c (for reference.p12 with sentinel key)"
+    echo "[import-certs-to-pkcs11] ✓ Certificate and private key imported to slot 0x2c (for P12 patch test)"
 fi
 
 # Cleanup temp files if we extracted from P12
