@@ -72,10 +72,13 @@ RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
 RUN rm -rf /opt/trower-base64
 
 #Install RDK cert selector libraries
-RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
+RUN cd /opt && git clone -b feature/RDK-60640 https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
+    mkdir -p /etc/pki/scripts && \
+    cp -r test/cert-scripts/* /etc/pki/scripts/ && \
+    chmod +x /etc/pki/scripts/*.sh && \
     cd .. && rm -rf /opt/rdk-cert-config
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
@@ -131,6 +134,35 @@ RUN rm -rf /opt/tr69hostif
 # Install nodejs
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
 RUN apt-get install -q -y nodejs
+
+# Install PKCS#11 dependencies (lightweight ~20MB)
+# These are always installed but only used when ENABLE_PKCS11=true at runtime
+RUN apt-get update && apt-get install -y \
+    softhsm2 \
+    libsofthsm2 \
+    opensc \
+    libengine-pkcs11-openssl \
+    libp11-3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories for PKCS#11
+RUN mkdir -p /var/lib/softhsm/tokens && \
+    chmod 755 /var/lib/softhsm/tokens
+
+# Copy PKCS#11 setup scripts and patch
+# OpenSSL 3.0.5 will be compiled at runtime if ENABLE_PKCS11=true
+COPY scripts/setup-pkcs11-openssl.sh /usr/local/bin/
+COPY scripts/init-pkcs11-tokens.sh /usr/local/bin/
+COPY scripts/import-certs-to-pkcs11.sh /usr/local/bin/
+COPY scripts/softhsm2.conf /etc/softhsm2.conf
+COPY patches/pkcs11_migration_support_p12.patch /opt/patches/
+
+RUN chmod +x /usr/local/bin/setup-pkcs11-openssl.sh \
+             /usr/local/bin/init-pkcs11-tokens.sh \
+             /usr/local/bin/import-certs-to-pkcs11.sh
+
+# Environment variable for PKCS#11
+ENV SOFTHSM2_CONF=/etc/softhsm2.conf
 
 # Trim down the docker image size
 RUN apt-get remove -y software-properties-common

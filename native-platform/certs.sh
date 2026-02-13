@@ -43,19 +43,20 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     echo "[certs] Waiting for server certificates..."
     done
 
-    # Copy individual server CA certificates to system trust store
+    # Copy root CA to system trust store
     cp "$SHARED_CERTS_DIR/server/root_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
-    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-*.pem
+    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
+    
+    # Copy server ICA to shared location for ci-setup-environment.sh to use
+    mkdir -p /mnt/L2_CONTAINER_SHARED_VOLUME/certs
+    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" /mnt/L2_CONTAINER_SHARED_VOLUME/certs/Test-RDK-server-ICA.pem
+    echo "[certs] Server ICA copied to shared volume for CA bundle creation during build"
 
     # Cleanup shared server certs after import
     rm -f "$SHARED_CERTS_DIR/server/root_ca.pem" \
         "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 
-    # Update CA certificates
-    echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf || true
-    echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf || true
-    update-ca-certificates --fresh
+    echo "[certs] Server CA certificates imported"
 else
     echo "[certs] mock-xconf not resolvable (${MOCKXCONF_HOST}); skipping server CA import"
 fi
@@ -103,7 +104,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Copy client CA chain to shared volume for mock-xconf container
     mkdir -p "$SHARED_CERTS_DIR/client"
-    cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    if [ -f "$CLIENT_ICA_CHAIN" ]; then
+        cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    else
+        echo "[certs] WARNING: Client ICA chain not found at $CLIENT_ICA_CHAIN" >&2
+    fi
 
     # Validate shared export exists and is non-empty
     if [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
@@ -113,6 +118,22 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
+
+    # Generate reference P12 with sentinel key for PKCS#11 testing
+    ENABLE_PKCS11=${ENABLE_PKCS11:-false}
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] PKCS#11 enabled - generating reference P12 with sentinel key"
+        if [ -f "/etc/pki/scripts/create-reference-p12.sh" ]; then
+            /etc/pki/scripts/create-reference-p12.sh "$CLIENT_CERT" /opt/certs/reference.p12 changeit
+            if [ $? -eq 0 ]; then
+                echo "[certs] ✓ Reference P12 created for PKCS#11 testing"
+            else
+                echo "[certs] WARNING: Failed to create reference P12" >&2
+            fi
+        else
+            echo "[certs] WARNING: create-reference-p12.sh not found, skipping reference P12" >&2
+        fi
+    fi
 
     # Create CertSelector configuration file
     echo "[certs] Creating CertSelector configuration file..."
