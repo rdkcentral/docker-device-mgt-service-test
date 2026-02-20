@@ -29,7 +29,7 @@ const options = {
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
   ca: fs.readFileSync(path.join('/etc/pki/Test-RDK-root/certs/Test-RDK-root.pem')),
   requestCert: true,
-  rejectUnauthorized: false,
+  rejectUnauthorized: true,
   port: 50050
 };
 
