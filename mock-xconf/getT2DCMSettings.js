@@ -27,6 +27,9 @@ const { applyMtlsConfig } = require('./server-utils');
 const options = {
   key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
   cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
+  ca: fs.readFileSync(path.join('/etc/pki/Test-RDK-root/certs/Test-RDK-root.pem')),
+  requestCert: true,
+  rejectUnauthorized: false,
   port: 50050
 };
 
