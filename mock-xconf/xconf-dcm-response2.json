@@ -33,6 +33,12 @@
                 "pollingFrequency":"0"
             },
             {
+                "header":"Test_datamodel_1",
+                "content":"Device.X_RDK_WebConfig.webcfgSubdocForceReset",
+                "type":"<message_bus>",
+                "pollingFrequency":"3"
+            },
+            {
                 "header": "SYS_GREP_TEST",
                 "content": "This log file is for previous logs",
                 "type": "session0.txt",
