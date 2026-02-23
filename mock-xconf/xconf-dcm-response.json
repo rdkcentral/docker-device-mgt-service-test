@@ -121,6 +121,12 @@
                 "content": "2.4G private SSID (ath0) is off",
                 "type": "SelfHeal.txt.0",
                 "pollingFrequency": "0"
+            },
+            {
+                "header": "XWIFIS_CNT_2_split",
+                "content": "WIFI_MAC_10_TOTAL_COUNT:",
+                "type": "wifihealth.txt",
+                "pollingFrequency": "0"
             }
         ],
         "schedule": "*/15 * * * *",
