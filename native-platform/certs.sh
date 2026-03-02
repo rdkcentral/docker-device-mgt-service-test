@@ -88,8 +88,12 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         echo "[certs] ENABLE_PKCS11=true - Setting up PKCS#11 for mTLS..."
         
         if [ ! -f "/usr/local/openssl-pkcs11-ready" ]; then
-            OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
-            echo "[certs] Checking ${OPENSSL_VERSION} with PKCS#11 patch..."
+            if command -v /usr/local/bin/openssl >/dev/null 2>&1; then
+                OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
+                echo "[certs] Checking ${OPENSSL_VERSION} with PKCS#11 patch..."
+            else
+                echo "[certs] OpenSSL binary /usr/local/bin/openssl not found; running PKCS#11 setup..."
+            fi
             /usr/local/bin/setup-pkcs11-openssl.sh
             if [ $? -eq 0 ]; then
                 touch /usr/local/openssl-pkcs11-ready
