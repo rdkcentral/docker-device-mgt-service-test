@@ -229,20 +229,10 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     
     # Add reference.p12 first if PKCS#11 enabled
     if [ "$ENABLE_PKCS11" = "true" ]; then
-        echo "MTLS,REFERENCE_P12,P12,file:///opt/certs/reference.p12,changeit" > /etc/ssl/certsel/certsel.cfg
-        echo "[certs] ✓ Added PKCS#11 reference cert as primary"
+        echo "MTLS|REFERENCE_P12,P12,file:///opt/certs/reference.p12,cfgDynamicSECert" >> /etc/ssl/certsel/certsel.cfg
     fi
-    
-    # Add standard client certificates (fallback for PKCS#11, primary for normal mode)
-    if [ "$ENABLE_PKCS11" = "true" ]; then
-        echo "MTLS,CLIENT_P12,P12,file:///opt/certs/client.p12,changeit" >> /etc/ssl/certsel/certsel.cfg
-        echo "MTLS,CLIENT_PEM,PEM,file:///opt/certs/client.pem," >> /etc/ssl/certsel/certsel.cfg
-        echo "[certs] ✓ CertSelector configured: reference.p12 with fallback to client certs"
-    else
-        echo "MTLS,CLIENT_P12,P12,file:///opt/certs/client.p12,changeit" > /etc/ssl/certsel/certsel.cfg
-        echo "MTLS,CLIENT_PEM,PEM,file:///opt/certs/client.pem," >> /etc/ssl/certsel/certsel.cfg
-        echo "[certs] ✓ CertSelector configured: standard client certs"
-    fi
+    echo "MTLS|CLIENT_P12,P12,file:///opt/certs/client.p12,cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
+    echo "MTLS,CLIENT_PEM,PEM,file:///opt/certs/client.pem,cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
 
     echo "[certs] mTLS certificate trust flow established"
 else
