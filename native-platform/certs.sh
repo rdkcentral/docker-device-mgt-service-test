@@ -97,14 +97,16 @@ if [ "$ENABLE_MTLS" = "true" ]; then
             fi
             
             # Verify setup script exists
-            if [ ! -x "/usr/local/bin/setup-pkcs11-openssl.sh" ]; then
-                echo "[certs] ERROR: /usr/local/bin/setup-pkcs11-openssl.sh not found or not executable"
+            PKCS11_SETUP_SCRIPT="/usr/local/bin/setup-pkcs11-openssl.sh"
+            if [ ! -x "$PKCS11_SETUP_SCRIPT" ]; then
+                echo "[certs] ERROR: $PKCS11_SETUP_SCRIPT not found or not executable"
+                echo "[certs] PKCS#11 OpenSSL setup script may not be installed properly"
                 exit 1
             fi
             
             # Run setup with proper error handling (disable set -e temporarily)
             set +e
-            /usr/local/bin/setup-pkcs11-openssl.sh
+            "$PKCS11_SETUP_SCRIPT"
             SETUP_EXIT=$?
             set -e
             
@@ -167,12 +169,14 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         echo "[certs] Generating reference P12 with sentinel key for PKCS#11..."
         
         # Verify create_reference_p12 script exists and is executable
-        if [ ! -x "/usr/local/share/cert-scripts/create_reference_p12" ]; then
-            echo "[certs] ERROR: /usr/local/share/cert-scripts/create_reference_p12 not found or not executable"
+        REF_P12_SCRIPT="/usr/local/share/cert-scripts/create_reference_p12"
+        if [ ! -x "$REF_P12_SCRIPT" ]; then
+            echo "[certs] ERROR: $REF_P12_SCRIPT not found or not executable" >&2
+            echo "[certs] Ensure the cert-scripts package is installed and the script has execute permissions" >&2
             exit 1
         fi
         
-        if /usr/local/share/cert-scripts/create_reference_p12 "$CLIENT_CERT" /opt/certs/reference.p12 "changeit"; then
+        if "$REF_P12_SCRIPT" "$CLIENT_CERT" /opt/certs/reference.p12 "changeit"; then
             echo "[certs] Reference P12 created at /opt/certs/reference.p12"
         else
             echo "[certs] ERROR: Failed to create reference P12" >&2
