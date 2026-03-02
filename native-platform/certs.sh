@@ -42,12 +42,11 @@ mkdir -p ${SYSTEM_TRUST_STORE}
 # Only import server CA if mock-xconf is resolvable (DNS check)
 MOCKXCONF_HOST=${MOCKXCONF_HOST:-mockxconf}
 if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
-    # Wait for the root CA and intermediate CA to be available from server
-    echo "[certs] Waiting for server root CA and intermediate CA..."
-    while [ ! -f "$SHARED_CERTS_DIR/server/root_ca.pem" ] || \
-        [ ! -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; do
-    sleep 1
-    echo "[certs] Waiting for server certificates..."
+    # Wait for the root CA to be available from server (intermediate is optional)
+    echo "[certs] Waiting for server root CA..."
+    while [ ! -f "$SHARED_CERTS_DIR/server/root_ca.pem" ]; do
+        sleep 1
+        echo "[certs] Waiting for server root CA..."
     done
 
     # Copy root CA to system trust store
@@ -58,11 +57,13 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     if [ -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; then
         cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
         chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-        echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf || true
+        grep -qxF "mock-xconf-intermediate-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
+            echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
     fi
     
     # Register CA certificates and update system trust store
-    echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf || true
+    grep -qxF "mock-xconf-root-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
     /usr/sbin/update-ca-certificates --fresh
     echo "[certs] System CA trust store updated"
 
@@ -94,12 +95,24 @@ if [ "$ENABLE_MTLS" = "true" ]; then
             else
                 echo "[certs] OpenSSL binary /usr/local/bin/openssl not found; running PKCS#11 setup..."
             fi
+            
+            # Verify setup script exists
+            if [ ! -x "/usr/local/bin/setup-pkcs11-openssl.sh" ]; then
+                echo "[certs] ERROR: /usr/local/bin/setup-pkcs11-openssl.sh not found or not executable"
+                exit 1
+            fi
+            
+            # Run setup with proper error handling (disable set -e temporarily)
+            set +e
             /usr/local/bin/setup-pkcs11-openssl.sh
-            if [ $? -eq 0 ]; then
+            SETUP_EXIT=$?
+            set -e
+            
+            if [ $SETUP_EXIT -eq 0 ]; then
                 touch /usr/local/openssl-pkcs11-ready
                 echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch ready"
             else
-                echo "[certs] ERROR: PKCS#11 OpenSSL setup failed"
+                echo "[certs] ERROR: PKCS#11 OpenSSL setup failed with exit code $SETUP_EXIT"
                 exit 1
             fi
         else
@@ -156,11 +169,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     # Copy client CA chain to shared volume for mock-xconf container
     mkdir -p "$SHARED_CERTS_DIR/client"
-    if [ -f "$CLIENT_ICA_CHAIN" ]; then
-        cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
-    else
-        echo "[certs] WARNING: Client ICA chain not found at $CLIENT_ICA_CHAIN" >&2
-    fi
+    # CLIENT_ICA_CHAIN already validated above - safe to copy
+    cp "$CLIENT_ICA_CHAIN" "$SHARED_CERTS_DIR/client/ca-chain.pem"
 
     # Validate shared export exists and is non-empty
     if [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
@@ -174,16 +184,24 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
     if [ "$ENABLE_PKCS11" = "true" ]; then
         echo "[certs] Setting up PKCS#11 token and importing certificates..."
-        if [ -f "/opt/certs/client.p12" ] || [ -f "/opt/certs/reference.p12" ]; then
-            /usr/local/bin/setup-pkcs11.sh
-            if [ $? -eq 0 ]; then
-                echo "[certs] ✓ PKCS#11 token initialized, certificates imported, and configs created"
-            else
-                echo "[certs] ERROR: PKCS#11 setup failed"
-                exit 1
-            fi
+        
+        # reference.p12 is guaranteed to exist here (created above when ENABLE_PKCS11=true)
+        # Verify setup script exists
+        if [ ! -x "/usr/local/bin/setup-pkcs11.sh" ]; then
+            echo "[certs] ERROR: /usr/local/bin/setup-pkcs11.sh not found or not executable"
+            exit 1
+        fi
+        
+        # Run setup with proper error handling (disable set -e temporarily)
+        set +e
+        /usr/local/bin/setup-pkcs11.sh
+        SETUP_EXIT=$?
+        set -e
+        
+        if [ $SETUP_EXIT -eq 0 ]; then
+            echo "[certs] ✓ PKCS#11 token initialized, certificates imported, and configs created"
         else
-            echo "[certs] ERROR: No P12 files found in /opt/certs for PKCS#11 setup"
+            echo "[certs] ERROR: PKCS#11 setup failed with exit code $SETUP_EXIT"
             exit 1
         fi
     fi
