@@ -24,13 +24,6 @@ set -e
 # Certificate setup for native-platform container
 ##########################################################################
 
-# Verify update-ca-certificates command is available
-if [ ! -x "/usr/sbin/update-ca-certificates" ]; then
-    echo "[certs] ERROR: /usr/sbin/update-ca-certificates not found or not executable"
-    echo "[certs] ca-certificates package may not be installed properly"
-    exit 1
-fi
-
 # Shared certificates base directory
 SHARED_CERTS_DIR="/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs"
 mkdir -p "$SHARED_CERTS_DIR"
@@ -42,6 +35,13 @@ mkdir -p ${SYSTEM_TRUST_STORE}
 # Only import server CA if mock-xconf is resolvable (DNS check)
 MOCKXCONF_HOST=${MOCKXCONF_HOST:-mockxconf}
 if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
+    # Verify update-ca-certificates command is available
+    if [ ! -x "/usr/sbin/update-ca-certificates" ]; then
+        echo "[certs] ERROR: /usr/sbin/update-ca-certificates not found or not executable"
+        echo "[certs] ca-certificates package may not be installed properly"
+        exit 1
+    fi
+
     # Wait for the root CA to be available from server (intermediate is optional)
     echo "[certs] Waiting for server root CA..."
     while [ ! -f "$SHARED_CERTS_DIR/server/root_ca.pem" ]; do
@@ -110,7 +110,13 @@ if [ "$ENABLE_MTLS" = "true" ]; then
             
             if [ $SETUP_EXIT -eq 0 ]; then
                 touch /usr/local/openssl-pkcs11-ready
-                echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch ready"
+                # Recompute version after successful setup
+                if command -v /usr/local/bin/openssl >/dev/null 2>&1; then
+                    OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
+                    echo "[certs] OpenSSL ${OPENSSL_VERSION} with PKCS#11 patch ready"
+                else
+                    echo "[certs] OpenSSL with PKCS#11 patch ready"
+                fi
             else
                 echo "[certs] ERROR: PKCS#11 OpenSSL setup failed with exit code $SETUP_EXIT"
                 exit 1
@@ -159,6 +165,13 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     # Generate reference P12 with sentinel key for PKCS#11 testing
     if [ "$ENABLE_PKCS11" = "true" ]; then
         echo "[certs] Generating reference P12 with sentinel key for PKCS#11..."
+        
+        # Verify create_reference_p12 script exists and is executable
+        if [ ! -x "/usr/local/share/cert-scripts/create_reference_p12" ]; then
+            echo "[certs] ERROR: /usr/local/share/cert-scripts/create_reference_p12 not found or not executable"
+            exit 1
+        fi
+        
         if /usr/local/share/cert-scripts/create_reference_p12 "$CLIENT_CERT" /opt/certs/reference.p12 "changeit"; then
             echo "[certs] Reference P12 created at /opt/certs/reference.p12"
         else
