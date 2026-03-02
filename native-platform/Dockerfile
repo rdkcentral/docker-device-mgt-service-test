@@ -78,6 +78,8 @@ RUN cd /opt && \
     git fetch --tags && \
     LATEST_TAG=$(git tag --sort=-v:refname | head -n 1) && \
     git checkout "$LATEST_TAG" && \
+    autoreconf --install && \
+    ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
     ln -s /usr/local/share/pkcs11-scripts/setup-pkcs11.sh /usr/local/bin/setup-pkcs11.sh && \
