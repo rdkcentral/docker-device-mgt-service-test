@@ -76,8 +76,8 @@ RUN cd /opt && git clone -b feature/RDK-60640 https://github.com/rdkcentral/rdk-
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
-    ln -sf /usr/local/share/pkcs11-scripts/setup-pkcs11.sh /usr/local/bin/setup-pkcs11.sh && \
-    ln -sf /usr/local/share/pkcs11-scripts/setup-pkcs11-openssl.sh /usr/local/bin/setup-pkcs11-openssl.sh && \
+    ln -s /usr/local/share/pkcs11-scripts/setup-pkcs11.sh /usr/local/bin/setup-pkcs11.sh && \
+    ln -s /usr/local/share/pkcs11-scripts/setup-pkcs11-openssl.sh /usr/local/bin/setup-pkcs11-openssl.sh && \
     cp /usr/local/share/pkcs11-scripts/softhsm2.conf /etc/softhsm2.conf && \
     mkdir -p /opt/patches && cp /usr/local/share/patches/pkcs11_migration_support_p12.patch /opt/patches/ && \
     cd .. && rm -rf /opt/rdk-cert-config
