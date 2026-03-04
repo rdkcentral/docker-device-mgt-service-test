@@ -104,6 +104,9 @@ if [ "$ENABLE_MTLS" = "true" ]; then
                 exit 1
             fi
             
+            # Ensure engines directory exists for PKCS#11 symlink
+            mkdir -p /usr/local/lib/engines-3
+            
             # Run setup with proper error handling (disable set -e temporarily)
             set +e
             "$PKCS11_SETUP_SCRIPT"
