@@ -42,7 +42,6 @@ const fs   = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execSync } = require('node:child_process');
-const { applyMtlsConfig } = require('./server-utils');
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -71,8 +70,11 @@ const options = {
   port: PORT
 };
 
-// Apply mTLS settings (requestCert / CA chain) when ENABLE_MTLS=true
-applyMtlsConfig(options);
+// mTLS is intentionally NOT applied to xpki-certifier.
+// This mock service signs CSRs at certificate procurement time, before any
+// client (test or rdkxpkicertifier) holds a seed certificate to present.
+// Enforcing client-cert auth here would cause TLS handshake failures for all
+// callers. Other services that require mTLS still use applyMtlsConfig().
 
 // ─── Certificate signing helpers ─────────────────────────────────────────────
 
