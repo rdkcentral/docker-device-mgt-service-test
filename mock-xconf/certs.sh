@@ -87,4 +87,60 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS certificate trust flow established"
 fi
 
+# ─── RDK-61060: Generate Test-RDK-xpki-ICA for XPKI Certifier service ────────
+
+echo "[certs] Generating Test-RDK-xpki-ICA for XPKI Certifier service..."
+
+XPKI_DIR="/etc/xconf/xpki-certs"
+mkdir -p "$XPKI_DIR"
+
+XPKI_ROOT_KEY="$XPKI_DIR/Test-RDK-xpki-root.key"
+XPKI_ROOT_CERT="$XPKI_DIR/Test-RDK-xpki-root.pem"
+XPKI_ICA_KEY="$XPKI_DIR/Test-RDK-xpki-ICA.key"
+XPKI_ICA_CSR="$XPKI_DIR/Test-RDK-xpki-ICA.csr"
+XPKI_ICA_CERT="$XPKI_DIR/Test-RDK-xpki-ICA.pem"
+
+# Generate xpki root CA key and self-signed cert
+openssl ecparam -genkey -name prime256v1 -noout -out "$XPKI_ROOT_KEY"
+openssl req -new -x509 -key "$XPKI_ROOT_KEY" \
+    -out "$XPKI_ROOT_CERT" \
+    -days 3650 -sha256 \
+    -subj "/C=US/ST=PA/O=RDK Test Environment/OU=xPKI Test Root/CN=Test-RDK-xpki-root" \
+    -extensions v3_ca \
+    -addext "basicConstraints=critical,CA:TRUE"
+
+# Generate xpki ICA key
+openssl ecparam -genkey -name prime256v1 -noout -out "$XPKI_ICA_KEY"
+
+# Create ICA CSR
+openssl req -new -key "$XPKI_ICA_KEY" \
+    -out "$XPKI_ICA_CSR" \
+    -subj "/C=US/ST=PA/O=RDK Test Environment/OU=xPKI Test ICA/CN=Test-RDK-xpki-ICA"
+
+# Sign ICA with xpki root
+openssl x509 -req \
+    -in "$XPKI_ICA_CSR" \
+    -CA "$XPKI_ROOT_CERT" \
+    -CAkey "$XPKI_ROOT_KEY" \
+    -CAcreateserial \
+    -out "$XPKI_ICA_CERT" \
+    -days 3650 -sha256 \
+    -extfile <(printf "basicConstraints=critical,CA:TRUE,pathlen:0\nkeyUsage=critical,keyCertSign,cRLSign\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid:always\n")
+
+rm -f "$XPKI_ICA_CSR"
+
+# Verify all required files are present
+for f in "$XPKI_ROOT_KEY" "$XPKI_ROOT_CERT" "$XPKI_ICA_KEY" "$XPKI_ICA_CERT"; do
+    if [ ! -s "$f" ]; then
+        echo "[certs] ERROR: Missing XPKI cert artifact: $f" >&2
+        exit 1
+    fi
+done
+
+echo "[certs] Test-RDK-xpki-ICA generated successfully in $XPKI_DIR"
+
+# Copy xpki root cert to shared volume so native-platform can trust it
+cp "$XPKI_ROOT_CERT" "$SHARED_CERTS_DIR/server/xpki-root.pem"
+echo "[certs] XPKI root CA copied to shared volume for native-platform trust store"
+
 exit 0

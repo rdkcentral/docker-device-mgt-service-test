@@ -49,5 +49,8 @@ node /usr/local/bin/stbLogUpload.js &
 
 node /usr/local/bin/crashUpload.js &
 
+## RDK-61060: Start XPKI Certifier service (port 50054)
+node /usr/local/bin/xpki-certifier.js &
+
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
 while true ; do echo "Mocked webservice heartbeat ..." && sleep 5 ; done
