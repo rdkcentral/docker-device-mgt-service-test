@@ -62,6 +62,11 @@ const s3Options = {
   port: 50057
 };
 
+// Apply mTLS settings for direct uploads
+applyMtlsConfig(directOptions);
+// Apply mTLS settings for S3 endpoint
+applyMtlsConfig(s3Options)
+
 /**
  * Handles admin endpoints for testing control
  */
