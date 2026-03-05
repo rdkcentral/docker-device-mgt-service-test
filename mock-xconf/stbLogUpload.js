@@ -22,6 +22,7 @@ const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url');
+const { applyMtlsConfig } = require('./server-utils');
 
 
 let saveUploadedLogs = true;
