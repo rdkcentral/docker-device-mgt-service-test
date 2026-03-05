@@ -17,7 +17,7 @@ services:
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
-      - ENABLE_MTLS=true    
+      - ENABLE_MTLS=false
 
 
   l2-container:
