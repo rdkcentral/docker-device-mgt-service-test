@@ -143,4 +143,64 @@ echo "[certs] Test-RDK-xpki-ICA generated successfully in $XPKI_DIR"
 cp "$XPKI_ROOT_CERT" "$SHARED_CERTS_DIR/server/xpki-root.pem"
 echo "[certs] XPKI root CA copied to shared volume for native-platform trust store"
 
+# ─── RDK-61060: Generate Seed Certificate for xPKI Seed-Scope Testing ────────
+
+echo "[certs] Generating seed certificate for xPKI seed-scope testing..."
+
+SEED_CERT_DIR="$SHARED_CERTS_DIR/client"
+mkdir -p "$SEED_CERT_DIR"
+
+SEED_KEY="$SEED_CERT_DIR/seed-cert.key"
+SEED_CSR="$SEED_CERT_DIR/seed-cert.csr"
+SEED_CERT="$SEED_CERT_DIR/seed-cert.pem"
+SEED_P12="$SEED_CERT_DIR/seed-cert.p12"
+SEED_PASSWORD="seedpass"
+
+# Generate seed certificate key
+openssl ecparam -genkey -name prime256v1 -noout -out "$SEED_KEY"
+
+# Create seed certificate CSR
+openssl req -new -key "$SEED_KEY" \
+    -out "$SEED_CSR" \
+    -subj "/C=US/ST=PA/O=RDK Test Environment/OU=xPKI Seed Scope/CN=test-seed-device-001"
+
+# Sign seed certificate with xPKI ICA (limited validity for seed scope)
+openssl x509 -req \
+    -in "$SEED_CSR" \
+    -CA "$XPKI_ICA_CERT" \
+    -CAkey "$XPKI_ICA_KEY" \
+    -CAcreateserial \
+    -out "$SEED_CERT" \
+    -days 30 -sha256 \
+    -extfile <(printf "keyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid:always\n")
+
+# Bundle into P12 for easy consumption by tests
+openssl pkcs12 -export \
+    -in "$SEED_CERT" \
+    -inkey "$SEED_KEY" \
+    -out "$SEED_P12" \
+    -passout pass:"$SEED_PASSWORD" \
+    -name "seed-cert-001"
+
+# Also create PEM bundle for convenience
+cat "$SEED_CERT" > "$SEED_CERT_DIR/seed-cert-bundle.pem"
+cat "$SEED_KEY" >> "$SEED_CERT_DIR/seed-cert-bundle.pem"
+
+# Cleanup CSR
+rm -f "$SEED_CSR"
+
+# Verify seed cert artifacts
+for f in "$SEED_KEY" "$SEED_CERT" "$SEED_P12"; do
+    if [ ! -s "$f" ]; then
+        echo "[certs] ERROR: Missing seed cert artifact: $f" >&2
+        exit 1
+    fi
+done
+
+echo "[certs] Seed certificate generated successfully:"
+echo "[certs]   - P12: $SEED_P12 (password: $SEED_PASSWORD)"
+echo "[certs]   - PEM: $SEED_CERT"
+echo "[certs]   - Key: $SEED_KEY"
+echo "[certs] Seed certificate ready for xPKI seed-scope testing"
+
 exit 0
