@@ -31,37 +31,12 @@ export ENABLE_MTLS
 ENABLE_PKCS11=${ENABLE_PKCS11:-false}
 export ENABLE_PKCS11
 
-# Build ssa-cpc and rdktrusthal-cpc if ENABLE_PKCS11 is true
+# Build ssa-cpc if ENABLE_PKCS11 is true
+# Note: rdktrusthal-cpc is built into the Docker image at build time (see Dockerfile)
 if [ "$ENABLE_PKCS11" = "true" ]; then
-    echo "[entrypoint] ENABLE_PKCS11=true - Building ssa-cpc and rdktrusthal-cpc..."
+    echo "[entrypoint] ENABLE_PKCS11=true - Building ssa-cpc from shared volume..."
     
-    # Build rdktrusthal-cpc first (dependency)
-    RDKTRUSTHAL_SRC="/mnt/L2_CONTAINER_SHARED_VOLUME/rdktrusthal-cpc"
-    if [ -d "$RDKTRUSTHAL_SRC" ]; then
-        cd "$RDKTRUSTHAL_SRC"
-        
-        if [ ! -f "Makefile" ]; then
-            echo "[entrypoint] Configuring rdktrusthal-cpc..."
-            autoreconf --install 2>&1 | grep -v "warning:" || true
-            ./configure --prefix=/usr/local --enable-pkcs11 2>&1 | grep -v "warning:" || true
-        fi
-        
-        echo "[entrypoint] Building rdktrusthal-cpc..."
-        make clean 2>/dev/null || true
-        make -j$(nproc) 2>&1 | tail -20
-        make install 2>&1 | grep -E "(Installing|installed)" || true
-        
-        if [ -f "/usr/local/lib/librdktrusthal-cpc.so" ]; then
-            echo "[entrypoint] ✓ rdktrusthal-cpc installed"
-            ldconfig
-        else
-            echo "[entrypoint] ⚠ rdktrusthal-cpc build failed"
-        fi
-    else
-        echo "[entrypoint] ⚠ rdktrusthal-cpc source not found"
-    fi
-    
-    # Build ssa-cpc CA provider libraries
+    # Build ssa-cpc CA provider libraries from shared volume
     SSA_CPC_SRC="/mnt/L2_CONTAINER_SHARED_VOLUME/ssa-cpc"
     if [ -d "$SSA_CPC_SRC" ]; then
         cd "$SSA_CPC_SRC"

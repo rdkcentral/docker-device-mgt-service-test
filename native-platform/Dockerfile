@@ -83,8 +83,11 @@ RUN cd /opt && git clone -b 1.0.3 https://github.com/rdkcentral/rdk-cert-config.
     cd .. && rm -rf /opt/rdk-cert-config
 
 # Build and install rdktrusthal-cpc for PKCS#11 certificate procurement
-# This is mounted from host workspace for testing
-RUN mkdir -p /opt/rdktrusthal-cpc
+RUN cd /opt && git clone -b 2.0.2 https://github.com/rdk-common/rdktrusthal-cpc.git && \
+    cd rdktrusthal-cpc && autoreconf --install && \
+    ./configure --prefix=/usr/local --enable-pkcs11 && \
+    make && make install && \
+    cd .. && rm -rf /opt/rdktrusthal-cpc
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
 
