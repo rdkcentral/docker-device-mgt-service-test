@@ -39,9 +39,10 @@
 
 const https = require('node:https');
 const fs   = require('node:fs');
-const path = require('node:path');
 const crypto = require('node:crypto');
-const { execSync } = require('node:child_process');
+const os = require('node:os');
+const { execFileSync } = require('node:child_process');
+const TMPDIR = os.tmpdir();
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -79,6 +80,10 @@ for (const f of tlsFiles) {
 
 // ─── Runtime state (reset via admin endpoint) ─────────────────────────────────
 
+// Request logging settings (cap the log to avoid unbounded growth)
+const ENABLE_REQUEST_LOG = (process.env.XPKI_ENABLE_REQUEST_LOG || 'true') === 'true';
+const MAX_REQUEST_LOG_ENTRIES = parseInt(process.env.XPKI_MAX_LOG_ENTRIES || '1000', 10) || 1000;
+
 let requestLog = [];
 let forceErrorMode = null;   // null | 'csr_invalid' | 'server_error' | 'rate_limit'
 let requestCount = 0;
@@ -110,28 +115,40 @@ console.log('[xpki-certifier] TLS certificates loaded successfully');
  * approach used throughout mockxconf.
  */
 function signCsrWithOpenssl(csrPem, validityDays) {
-  const tmpDir  = '/tmp/xpki-certifier';
-  fs.mkdirSync(tmpDir, { recursive: true });
+  const tmpDir  = fs.mkdtempSync(`${TMPDIR}/xpki-certifier-`);
+  const serialHex = crypto.randomBytes(8).toString('hex');
+  const serialForOpenSSL = `0x${serialHex}`;
+  const csrPath  = `${tmpDir}/${serialHex}.csr`;
+  const certPath = `${tmpDir}/${serialHex}.pem`;
+  const extPath  = `${tmpDir}/${serialHex}.ext`;
 
-  const serial   = crypto.randomBytes(8).toString('hex');
-  const csrPath  = `${tmpDir}/${serial}.csr`;
-  const certPath = `${tmpDir}/${serial}.pem`;
+  fs.writeFileSync(csrPath, csrPem, { mode: 0o600 });
 
-  fs.writeFileSync(csrPath, csrPem);
+  // Validate and clamp validityDays (user-controlled input)
+  let days = parseInt(validityDays, 10);
+  if (Number.isNaN(days) || days <= 0) days = 90;
+  // Cap to reasonable maximum (10 years)
+  days = Math.min(Math.max(days, 1), 3650);
+
+  // Write extfile instead of using shell process substitution
+  const extContent = 'keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth,serverAuth\n';
+  fs.writeFileSync(extPath, extContent, { mode: 0o600 });
 
   try {
-    execSync(
-      `openssl x509 -req \
-        -in "${csrPath}" \
-        -CA "${XPKI_ICA_CERT}" \
-        -CAkey "${XPKI_ICA_KEY}" \
-        -CAcreateserial \
-        -out "${certPath}" \
-        -days ${validityDays || 90} \
-        -sha256 \
-        -extfile <(printf "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth,serverAuth\n")`,
-      { shell: '/bin/bash', stdio: 'pipe' }
-    );
+    // Use execFileSync with argv array to avoid shell injection
+    const args = [
+      'x509', '-req',
+      '-in', csrPath,
+      '-CA', XPKI_ICA_CERT,
+      '-CAkey', XPKI_ICA_KEY,
+      '-set_serial', serialForOpenSSL,
+      '-out', certPath,
+      '-days', String(days),
+      '-sha256',
+      '-extfile', extPath
+    ];
+
+    execFileSync('openssl', args, { stdio: 'pipe' });
 
     const certPem  = fs.readFileSync(certPath, 'utf8');
     const icaPem   = fs.readFileSync(XPKI_ICA_CERT, 'utf8');
@@ -139,9 +156,11 @@ function signCsrWithOpenssl(csrPem, validityDays) {
 
     return { certPem, chain: [icaPem, rootPem] };
   } finally {
-    // Clean up temp files
+    // Clean up temp files and directory
     try { fs.unlinkSync(csrPath); } catch (_) {}
     try { fs.unlinkSync(certPath); } catch (_) {}
+    try { fs.unlinkSync(extPath); } catch (_) {}
+    try { fs.rmdirSync(tmpDir); } catch (_) {}
   }
 }
 
