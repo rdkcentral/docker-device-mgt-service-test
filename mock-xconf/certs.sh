@@ -1,4 +1,5 @@
 #!/bin/sh
+echo "[certs.sh] Starting certificate generation..."
 set -e
 
 ##########################################################################
@@ -202,5 +203,24 @@ echo "[certs]   - P12: $SEED_P12 (password: $SEED_PASSWORD)"
 echo "[certs]   - PEM: $SEED_CERT"
 echo "[certs]   - Key: $SEED_KEY"
 echo "[certs] Seed certificate ready for xPKI seed-scope testing"
+
+# ─── Final validation summary ─────────────────────────────────────────────────
+
+echo "[certs] =========================================="
+echo "[certs] Certificate generation completed"
+echo "[certs] =========================================="
+echo "[certs] Summary of generated artifacts:"
+echo "[certs]   Server TLS:"
+echo "[certs]     - /etc/xconf/certs/mock-xconf-server-key.pem"
+echo "[certs]     - /etc/xconf/certs/mock-xconf-server-cert.pem"
+echo "[certs]   XPKI ICA (for xpki-certifier.js):"
+echo "[certs]     - $XPKI_ROOT_CERT"
+echo "[certs]     - $XPKI_ICA_CERT"
+echo "[certs]     - $XPKI_ICA_KEY"
+echo "[certs]   Seed Certificate (for PKCS#11):"
+echo "[certs]     - $SEED_CERT"
+echo "[certs]     - $SEED_KEY"
+echo "[certs]     - $SEED_P12"
+echo "[certs] All certificate generation tasks completed successfully"
 
 exit 0

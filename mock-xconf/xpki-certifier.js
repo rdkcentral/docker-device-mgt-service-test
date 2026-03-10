@@ -56,6 +56,27 @@ const XPKI_ROOT_CERT = '/etc/xconf/xpki-certs/Test-RDK-xpki-root.pem';
 const SERVER_KEY  = '/etc/xconf/certs/mock-xconf-server-key.pem';
 const SERVER_CERT = '/etc/xconf/certs/mock-xconf-server-cert.pem';
 
+// ─── Startup diagnostics ──────────────────────────────────────────────────────
+
+console.log('[xpki-certifier] ====================================');
+console.log('[xpki-certifier] Mock XPKI Certifier Service starting');
+console.log('[xpki-certifier] ====================================');
+console.log(`[xpki-certifier] Node version: ${process.version}`);
+console.log(`[xpki-certifier] PID: ${process.pid}`);
+console.log(`[xpki-certifier] Target port: ${PORT}`);
+console.log('[xpki-certifier] Checking required certificate files...');
+
+// Check server TLS files first (should exist from certs.sh)
+const tlsFiles = [SERVER_KEY, SERVER_CERT];
+for (const f of tlsFiles) {
+  const exists = fs.existsSync(f);
+  console.log(`[xpki-certifier]   ${exists ? '✓' : '✗'} ${f}`);
+  if (!exists) {
+    console.error(`[xpki-certifier] FATAL: Missing required TLS file: ${f}`);
+    process.exit(1);
+  }
+}
+
 // ─── Runtime state (reset via admin endpoint) ─────────────────────────────────
 
 let requestLog = [];
@@ -64,11 +85,13 @@ let requestCount = 0;
 
 // ─── HTTPS server options ─────────────────────────────────────────────────────
 
+console.log('[xpki-certifier] Loading TLS certificates for HTTPS server...');
 const options = {
   key:  fs.readFileSync(SERVER_KEY),
   cert: fs.readFileSync(SERVER_CERT),
   port: PORT
 };
+console.log('[xpki-certifier] TLS certificates loaded successfully');
 
 // mTLS is intentionally NOT applied to xpki-certifier.
 // This mock service signs CSRs at certificate procurement time, before any
@@ -253,33 +276,56 @@ function handleRequest(req, res) {
 
 // Wait until ICA certs are available (certs.sh runs before this process starts)
 function waitForCerts(retries, cb) {
-  if (fs.existsSync(XPKI_ICA_KEY) && fs.existsSync(XPKI_ICA_CERT) && fs.existsSync(XPKI_ROOT_CERT)) {
+  const required = [
+    { path: XPKI_ICA_KEY, desc: 'XPKI ICA Key' },
+    { path: XPKI_ICA_CERT, desc: 'XPKI ICA Cert' },
+    { path: XPKI_ROOT_CERT, desc: 'XPKI Root Cert' }
+  ];
+
+  const missing = required.filter(f => !fs.existsSync(f.path));
+
+  if (missing.length === 0) {
+    console.log('[xpki-certifier] All XPKI ICA certificates found:');
+    required.forEach(f => console.log(`[xpki-certifier]   ✓ ${f.desc}: ${f.path}`));
     return cb(null);
   }
+
   if (retries <= 0) {
-    return cb(new Error(`XPKI ICA certificates not found after waiting. Expected:\n  ${XPKI_ICA_KEY}\n  ${XPKI_ICA_CERT}\n  ${XPKI_ROOT_CERT}`));
+    console.error('[xpki-certifier] FATAL: XPKI ICA certificates not found after waiting.');
+    console.error('[xpki-certifier] Missing files:');
+    missing.forEach(f => console.error(`[xpki-certifier]   ✗ ${f.desc}: ${f.path}`));
+    return cb(new Error(`XPKI ICA certificates not found. Expected: ${required.map(f => f.path).join(', ')}`));
   }
-  console.log(`[xpki-certifier] Waiting for XPKI ICA certificates... (${retries} retries left)`);
+
+  console.log(`[xpki-certifier] Waiting for XPKI ICA certificates... (${retries} retries left, ${missing.length} files missing)`);
   setTimeout(() => waitForCerts(retries - 1, cb), 2000);
 }
 
+console.log('[xpki-certifier] Waiting for XPKI ICA certificates from certs.sh...');
 waitForCerts(15, (err) => {
   if (err) {
     console.error('[xpki-certifier] FATAL:', err.message);
     process.exit(1);
   }
 
+  console.log('[xpki-certifier] Creating HTTPS server...');
   const server = https.createServer(options, handleRequest);
 
   server.listen(PORT, () => {
-    console.log(`[xpki-certifier] Mock XPKI Certifier Service listening on port ${PORT}`);
+    console.log('[xpki-certifier] ====================================');
+    console.log(`[xpki-certifier] ✓ Server READY on port ${PORT}`);
+    console.log('[xpki-certifier] ====================================');
     console.log(`[xpki-certifier] Endpoint: https://mockxconf:${PORT}/v1/certifier`);
     console.log(`[xpki-certifier] Seed-scope endpoint: https://mockxconf:${PORT}/api/v1/device-cert`);
+    console.log(`[xpki-certifier] Health check: https://mockxconf:${PORT}/health`);
     console.log(`[xpki-certifier] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'enabled' : 'disabled'}`);
   });
 
   server.on('error', (err) => {
     console.error('[xpki-certifier] Server error:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[xpki-certifier] Port ${PORT} is already in use!`);
+    }
     process.exit(1);
   });
 
