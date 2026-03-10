@@ -118,7 +118,15 @@ openssl req -new -key "$XPKI_ICA_KEY" \
     -out "$XPKI_ICA_CSR" \
     -subj "/C=US/ST=PA/O=RDK Test Environment/OU=xPKI Test ICA/CN=Test-RDK-xpki-ICA"
 
-# Sign ICA with xpki root
+# Sign ICA with xpki root (portable: write extfile to disk)
+extfile=$(mktemp /tmp/xpki_ica_ext.XXXX) || extfile="/tmp/xpki_ica_ext.$$"
+cat > "$extfile" <<'EXT'
+basicConstraints=critical,CA:TRUE,pathlen:0
+keyUsage=critical,keyCertSign,cRLSign
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always
+EXT
+
 openssl x509 -req \
     -in "$XPKI_ICA_CSR" \
     -CA "$XPKI_ROOT_CERT" \
@@ -126,7 +134,9 @@ openssl x509 -req \
     -CAcreateserial \
     -out "$XPKI_ICA_CERT" \
     -days 3650 -sha256 \
-    -extfile <(printf "basicConstraints=critical,CA:TRUE,pathlen:0\nkeyUsage=critical,keyCertSign,cRLSign\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid:always\n")
+    -extfile "$extfile"
+
+rm -f "$extfile"
 
 rm -f "$XPKI_ICA_CSR"
 
@@ -140,9 +150,9 @@ done
 
 echo "[certs] Test-RDK-xpki-ICA generated successfully in $XPKI_DIR"
 
-# Copy xpki root cert to shared volume so native-platform can trust it
-cp "$XPKI_ROOT_CERT" "$SHARED_CERTS_DIR/server/xpki-root.pem"
-echo "[certs] XPKI root CA copied to shared volume for native-platform trust store"
+# Note: xpki root cert is available in $XPKI_ROOT_CERT. Native-platform currently
+# imports root_ca.pem/intermediate_ca.pem; if native-platform needs xpki-root.pem
+# add import logic there. Skipping copy to avoid misleading unused artifacts.
 
 # ─── RDK-61060: Generate Seed Certificate for xPKI Seed-Scope Testing ────────
 
@@ -166,6 +176,14 @@ openssl req -new -key "$SEED_KEY" \
     -subj "/C=US/ST=PA/O=RDK Test Environment/OU=xPKI Seed Scope/CN=test-seed-device-001"
 
 # Sign seed certificate with xPKI ICA (limited validity for seed scope)
+extfile_seed=$(mktemp /tmp/xpki_seed_ext.XXXX) || extfile_seed="/tmp/xpki_seed_ext.$$"
+cat > "$extfile_seed" <<'EXT'
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=clientAuth
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always
+EXT
+
 openssl x509 -req \
     -in "$SEED_CSR" \
     -CA "$XPKI_ICA_CERT" \
@@ -173,7 +191,9 @@ openssl x509 -req \
     -CAcreateserial \
     -out "$SEED_CERT" \
     -days 30 -sha256 \
-    -extfile <(printf "keyUsage=critical,digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid:always\n")
+    -extfile "$extfile_seed"
+
+rm -f "$extfile_seed"
 
 # Bundle into P12 for easy consumption by tests
 openssl pkcs12 -export \
