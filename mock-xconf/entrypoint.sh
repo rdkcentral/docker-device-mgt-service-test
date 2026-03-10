@@ -49,5 +49,17 @@ node /usr/local/bin/stbLogUpload.js &
 
 node /usr/local/bin/crashUpload.js &
 
+## RDK-61060: Start XPKI Certifier service (port 50055)
+echo "[entrypoint] DEBUG: Checking xpki-certifier.js file..."
+if [ -f /usr/local/bin/xpki-certifier.js ]; then
+	echo "[entrypoint] xpki-certifier.js found, starting service..."
+	node /usr/local/bin/xpki-certifier.js &
+	XPKI_PID=$!
+	echo "[entrypoint] xpki-certifier started (PID: $XPKI_PID) on port 50055"
+else
+	echo "[entrypoint] ERROR: /usr/local/bin/xpki-certifier.js NOT FOUND - xpki service will not start"
+	ls -la /usr/local/bin/xpki* || echo "No xpki files in /usr/local/bin"
+fi
+
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
 while true ; do echo "Mocked webservice heartbeat ..." && sleep 5 ; done
