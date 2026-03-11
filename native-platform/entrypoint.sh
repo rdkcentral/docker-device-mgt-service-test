@@ -27,7 +27,11 @@ export LD_LIBRARY_PATH=${RBUS_INSTALL_DIR}/lib:${LD_LIBRARY_PATH}
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 
-## Certificate setup
+# PKCS#11 Support - Initialize environment variable
+ENABLE_PKCS11=${ENABLE_PKCS11:-false}
+export ENABLE_PKCS11
+
+## Certificate setup (includes OpenSSL PKCS#11 setup if enabled)
 /usr/local/bin/certs.sh
 CERTS_RC=$?
 if [ "$CERTS_RC" -ne 0 ]; then
