@@ -20,7 +20,7 @@
 /**
  * Mock XPKI Certifier Service (RDK-61060)
  *
- * Listens on port 50055 and provides /v1/certifier and /api/v1/device-cert
+ * Listens on port 50055 and provides /v1/certifier/certificate and /api/v1/device-cert
  * endpoints for simulating the XPKI certificate procurement flow.
  *
  * Supports:
@@ -278,7 +278,7 @@ function handleRequest(req, res) {
 
   // Certificate issuance – both legacy and seed-scope paths
   const isCertEndpoint =
-    (req.method === 'POST' && req.url === '/v1/certifier') ||
+    (req.method === 'POST' && req.url === '/v1/certifier/certificate') ||
     (req.method === 'POST' && req.url === '/api/v1/device-cert');
 
   if (isCertEndpoint) {
@@ -334,7 +334,7 @@ waitForCerts(15, (err) => {
     console.log('[xpki-certifier] ====================================');
     console.log(`[xpki-certifier] ✓ Server READY on port ${PORT}`);
     console.log('[xpki-certifier] ====================================');
-    console.log(`[xpki-certifier] Endpoint: https://mockxconf:${PORT}/v1/certifier`);
+    console.log(`[xpki-certifier] Endpoint: https://mockxconf:${PORT}/v1/certifier/certificate`);
     console.log(`[xpki-certifier] Seed-scope endpoint: https://mockxconf:${PORT}/api/v1/device-cert`);
     console.log(`[xpki-certifier] Health check: https://mockxconf:${PORT}/health`);
     console.log(`[xpki-certifier] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'enabled' : 'disabled'}`);
