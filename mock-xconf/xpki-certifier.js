@@ -122,7 +122,17 @@ function signCsrWithOpenssl(csrPem, validityDays) {
   const certPath = `${tmpDir}/${serialHex}.pem`;
   const extPath  = `${tmpDir}/${serialHex}.ext`;
 
-  fs.writeFileSync(csrPath, csrPem, { mode: 0o600 });
+  // Format CSR: convert base64 to PEM if headers missing
+  let formattedCsr = csrPem.trim();
+  if (!formattedCsr.includes('-----BEGIN')) {
+    // Remove any whitespace/newlines from base64
+    const base64Clean = formattedCsr.replace(/\s+/g, '');
+    // Add PEM headers and format with 64-char lines
+    const base64Formatted = base64Clean.match(/.{1,64}/g).join('\n');
+    formattedCsr = `-----BEGIN CERTIFICATE REQUEST-----\n${base64Formatted}\n-----END CERTIFICATE REQUEST-----\n`;
+  }
+
+  fs.writeFileSync(csrPath, formattedCsr, { mode: 0o600 });
 
   // Validate and clamp validityDays (user-controlled input)
   let days = parseInt(validityDays, 10);
