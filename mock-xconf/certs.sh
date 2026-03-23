@@ -69,26 +69,9 @@ cp "$ROOT_CA_CERT" "$SHARED_CERTS_DIR/server/root_ca.pem"
 cp "$ICA_CERT" "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 echo "[certs] Server root and intermediate CA certificates copied to shared volume for native-platform"
 
-# If mTLS is enabled at startup, wait for client certificates
-if [ "$ENABLE_MTLS" = "true" ]; then
-    echo "[certs] mTLS enabled - waiting for client certificates..."
-
-    # Wait for client certificate chain
-    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
-        sleep 1
-        echo "[certs] Waiting for client certificates..."
-    done
-
-    echo "[certs] Client certificate chain found - importing to trust store"
-
-    # Import client CA chain to trust store and clean it up from shared volume
-    cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
-    rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
-    echo "[certs] Client CA chain imported to trust store"
-    echo "[certs] mTLS certificate trust flow established"
-fi
-
 # ─── RDK-61060: Generate Test-RDK-xpki-ICA for XPKI Certifier service ────────
+# NOTE: This MUST run BEFORE the mTLS wait so that xpki-certifier.js can start
+# immediately once certs.sh finishes. The XPKI ICA does not depend on client certs.
 
 echo "[certs] Generating Test-RDK-xpki-ICA for XPKI Certifier service..."
 
@@ -149,10 +132,6 @@ for f in "$XPKI_ROOT_KEY" "$XPKI_ROOT_CERT" "$XPKI_ICA_KEY" "$XPKI_ICA_CERT"; do
 done
 
 echo "[certs] Test-RDK-xpki-ICA generated successfully in $XPKI_DIR"
-
-# Note: xpki root cert is available in $XPKI_ROOT_CERT. Native-platform currently
-# imports root_ca.pem/intermediate_ca.pem; if native-platform needs xpki-root.pem
-# add import logic there. Skipping copy to avoid misleading unused artifacts.
 
 # ─── RDK-61060: Generate Seed Certificate for xPKI Seed-Scope Testing ────────
 
@@ -223,6 +202,43 @@ echo "[certs]   - P12: $SEED_P12 (password: $SEED_PASSWORD)"
 echo "[certs]   - PEM: $SEED_CERT"
 echo "[certs]   - Key: $SEED_KEY"
 echo "[certs] Seed certificate ready for xPKI seed-scope testing"
+
+# Copy xpki root cert to shared volume so native-platform can trust it
+cp "$XPKI_ROOT_CERT" "$SHARED_CERTS_DIR/server/xpki-root.pem"
+echo "[certs] XPKI root cert copied to shared volume for native-platform"
+
+# ─── mTLS: wait for client certificates (with timeout) ────────────────────────
+# This must come AFTER XPKI/seed generation so that xpki-certifier.js can start
+# even if client certs never arrive (standalone/dev mode).
+
+if [ "$ENABLE_MTLS" = "true" ]; then
+    echo "[certs] mTLS enabled - waiting for client certificates..."
+
+    MTLS_WAIT_TIMEOUT=${MTLS_WAIT_TIMEOUT:-120}
+    MTLS_WAITED=0
+
+    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
+        sleep 1
+        MTLS_WAITED=$((MTLS_WAITED + 1))
+        if [ $((MTLS_WAITED % 10)) -eq 0 ]; then
+            echo "[certs] Waiting for client certificates... (${MTLS_WAITED}s / ${MTLS_WAIT_TIMEOUT}s)"
+        fi
+        if [ "$MTLS_WAITED" -ge "$MTLS_WAIT_TIMEOUT" ]; then
+            echo "[certs] WARNING: mTLS client certificate wait timed out after ${MTLS_WAIT_TIMEOUT}s"
+            echo "[certs] Services will start WITHOUT mTLS client verification."
+            echo "[certs] Set MTLS_WAIT_TIMEOUT to increase, or ensure native-platform is running."
+            break
+        fi
+    done
+
+    if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
+        echo "[certs] Client certificate chain found - importing to trust store"
+        cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
+        rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+        echo "[certs] Client CA chain imported to trust store"
+        echo "[certs] mTLS certificate trust flow established"
+    fi
+fi
 
 # ─── Final validation summary ─────────────────────────────────────────────────
 
