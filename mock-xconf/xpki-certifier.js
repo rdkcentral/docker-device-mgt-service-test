@@ -124,15 +124,35 @@ function signCsrWithOpenssl(csrPem, validityDays) {
 
   // Format CSR: convert base64 to PEM if headers missing
   let formattedCsr = csrPem.trim();
-  if (!formattedCsr.includes('-----BEGIN')) {
-    // Remove any whitespace/newlines from base64
+  if (!formattedCsr.includes('-----BEGIN CERTIFICATE REQUEST-----')) {
+    // Attempt base64-to-PEM conversion
     const base64Clean = formattedCsr.replace(/\s+/g, '');
+    if (!base64Clean || base64Clean.length === 0) {
+      throw new Error('CSR is empty');
+    }
     // Add PEM headers and format with 64-char lines
     const base64Formatted = base64Clean.match(/.{1,64}/g).join('\n');
     formattedCsr = `-----BEGIN CERTIFICATE REQUEST-----\n${base64Formatted}\n-----END CERTIFICATE REQUEST-----\n`;
+    console.log('[xpki-certifier] Converted base64 CSR to PEM format');
+    console.log(`[xpki-certifier] CSR preview (first 100 chars): ${formattedCsr.substring(0, 100)}...`);
   }
 
   fs.writeFileSync(csrPath, formattedCsr, { mode: 0o600 });
+
+  // Validate CSR signature BEFORE attempting to sign
+  console.log('[xpki-certifier] Validating CSR signature...');
+  try {
+    const verifyResult = execFileSync('openssl', ['req', '-in', csrPath, '-noout', '-verify'], {
+      stdio: 'pipe',
+      encoding: 'utf8'
+    });
+    console.log(`[xpki-certifier] CSR validation result: ${verifyResult.trim()}`);
+  } catch (verifyErr) {
+    const errorMsg = verifyErr.stderr || verifyErr.message || 'Unknown verification error';
+    console.error('[xpki-certifier] CSR signature verification FAILED');
+    console.error(`[xpki-certifier] OpenSSL error: ${errorMsg}`);
+    throw new Error(`Invalid CSR signature: ${errorMsg}. This indicates the CSR was not properly signed, likely due to PKCS11 key access issues.`);
+  }
 
   // Validate and clamp validityDays (user-controlled input)
   let days = parseInt(validityDays, 10);
@@ -145,7 +165,7 @@ function signCsrWithOpenssl(csrPem, validityDays) {
   fs.writeFileSync(extPath, extContent, { mode: 0o600 });
 
   try {
-    // Use execFileSync with argv array to avoid shell injection
+    // Sign the validated CSR
     const args = [
       'x509', '-req',
       '-in', csrPath,
@@ -222,12 +242,28 @@ function handleCertRequest(req, res, body) {
     result = signCsrWithOpenssl(csrPem, params.validity_days);
   } catch (err) {
     console.error('[xpki-certifier] CSR signing failed:', err.message);
-    return sendJson(res, 400, { error: `CSR signing failed: ${err.message}`, status: 'error' });
+    
+    // Provide helpful error message for CSR validation failures
+    const errorResponse = {
+      error: err.message,
+      status: 'error',
+      hint: 'Check that the CSR was properly signed with the correct private key'
+    };
+    
+    if (err.message.includes('Invalid CSR signature')) {
+      errorResponse.hint = 'CSR signature verification failed. This usually indicates: ' +
+        '1) PKCS11 key is not accessible, ' +
+        '2) Wrong key was used to sign the CSR, ' +
+        '3) CSR was corrupted during transmission. ' +
+        'Check PKCS11 configuration and key availability.';
+    }
+    
+    return sendJson(res, 400, errorResponse);
   }
 
   const response = {
     certificate:       result.certPem,
-    certificate_chain: result.chain,
+    certificateChain: result.chain,
     status:            'success'
   };
 
