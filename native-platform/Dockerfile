@@ -71,11 +71,15 @@ RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
     ninja -C build && ninja -C build install
 RUN rm -rf /opt/trower-base64
 
-#Install RDK cert selector libraries
-RUN cd /opt && git clone https://github.com/rdkcentral/rdk-cert-config.git && \
+#Install RDK cert selector libraries and PKCS#11 scripts
+RUN cd /opt && git clone -b 1.0.3 https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
+    ln -s /usr/local/share/pkcs11-scripts/setup-pkcs11.sh /usr/local/bin/setup-pkcs11.sh && \
+    ln -s /usr/local/share/pkcs11-scripts/setup-pkcs11-openssl.sh /usr/local/bin/setup-pkcs11-openssl.sh && \
+    cp /usr/local/share/pkcs11-scripts/softhsm2.conf /etc/softhsm2.conf && \
+    mkdir -p /opt/patches && cp /usr/local/share/patches/pkcs11_migration_support_p12.patch /opt/patches/ && \
     cd .. && rm -rf /opt/rdk-cert-config
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
@@ -132,11 +136,36 @@ RUN rm -rf /opt/tr69hostif
 RUN curl -sL https://deb.nodesource.com/setup_22.x | bash -
 RUN apt-get install -q -y nodejs
 
+# Install PKCS#11 dependencies (lightweight ~20MB)
+# These are always installed but only used when ENABLE_PKCS11=true at runtime
+RUN apt-get update && apt-get install -y \
+    softhsm2 \
+    libsofthsm2 \
+    opensc \
+    libengine-pkcs11-openssl \
+    libp11-3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directories for PKCS#11
+RUN mkdir -p /var/lib/softhsm/tokens && \
+    chmod 755 /var/lib/softhsm/tokens
+
+# PKCS#11 setup scripts and OpenSSL patch will be installed from rdk-cert-config
+# Scripts will be available at /usr/local/share/pkcs11-scripts/
+# Patch will be available at /usr/local/share/patches/
+# (No need to COPY scripts locally - they come from rdk-cert-config installation above)
+
+# Environment variable for PKCS#11
+ENV SOFTHSM2_CONF=/etc/softhsm2.conf
+
 # Trim down the docker image size
 RUN apt-get remove -y software-properties-common
 RUN apt-get autoremove -y
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
+
+# Note: ca-certificates is installed at runtime in setup-pkcs11-openssl.sh
+# after removing system OpenSSL (which removes ca-certificates as a dependency)
 
 # Emulate the device side settings
 RUN mkdir -p /opt/logs
