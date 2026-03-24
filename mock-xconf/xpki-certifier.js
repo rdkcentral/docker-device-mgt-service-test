@@ -263,7 +263,7 @@ function handleCertRequest(req, res, body) {
 
   const response = {
     certificate:       result.certPem,
-    certificateChain: result.chain,
+    certificateChain: result.chain.join('\n'),
     status:            'success'
   };
 
