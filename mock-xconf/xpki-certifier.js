@@ -261,13 +261,17 @@ function handleCertRequest(req, res, body) {
     return sendJson(res, 400, errorResponse);
   }
 
+  // Production xPKI returns leaf cert + chain together in certificateChain field
+  // (in PKCS7 format), but for simplicity we return PEM with leaf cert first
+  const fullChain = [result.certPem, ...result.chain].join('\n');
+  
   const response = {
-    certificate:       result.certPem,
-    certificateChain: result.chain.join('\n'),
+    certificate:       result.certPem,           // Leaf cert (for backward compatibility)
+    certificateChain:  fullChain,                 // Leaf + ICA + root (production format)
     status:            'success'
   };
 
-  console.log('[xpki-certifier] Certificate issued successfully');
+  console.log('[xpki-certifier] Certificate issued successfully (leaf + chain)');
   requestCount++;
   return sendJson(res, 200, response);
 }
