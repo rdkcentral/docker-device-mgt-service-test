@@ -72,7 +72,7 @@ RUN cd /opt && git clone https://github.com/xmidt-org/trower-base64.git && \
 RUN rm -rf /opt/trower-base64
 
 #Install RDK cert selector libraries and PKCS#11 scripts
-RUN cd /opt && git clone -b 1.0.3 https://github.com/rdkcentral/rdk-cert-config.git && \
+RUN cd /opt && git clone -b feature/RDK-60640 https://github.com/rdkcentral/rdk-cert-config.git && \
     cd rdk-cert-config && autoreconf --install && ./configure --prefix=/usr/local --enable-testrdkcerts && \
     make && make install && \
     cp RdkConfigApi/src/librdkconfig.a /usr/local/lib/librdkconfig.a && \
@@ -81,6 +81,8 @@ RUN cd /opt && git clone -b 1.0.3 https://github.com/rdkcentral/rdk-cert-config.
     cp /usr/local/share/pkcs11-scripts/softhsm2.conf /etc/softhsm2.conf && \
     mkdir -p /opt/patches && cp /usr/local/share/patches/pkcs11_migration_support_p12.patch /opt/patches/ && \
     cd .. && rm -rf /opt/rdk-cert-config
+
+
 
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
 

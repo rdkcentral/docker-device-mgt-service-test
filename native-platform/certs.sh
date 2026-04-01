@@ -200,6 +200,49 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
+    
+    # Wait for xPKI seed certificate from mock-xconf (if PKCS#11 enabled)
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] Waiting for xPKI seed certificate from mock-xconf..."
+        WAIT_COUNT=0
+        MAX_WAIT=30
+        while [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] && [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+            sleep 1
+            WAIT_COUNT=$((WAIT_COUNT + 1))
+        done
+        
+        if [ -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] && [ -f "$SHARED_CERTS_DIR/client/seed-cert.key" ]; then
+            echo "[certs] ✓ xPKI seed certificate available for PKCS#11 provisioning"
+        else
+            echo "[certs] ⚠ xPKI seed certificate not available (timeout after ${MAX_WAIT}s)"
+            echo "[certs] PKCS#11 xPKI tests may be skipped"
+        fi
+    fi
+
+    # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
+    if [ "$ENABLE_PKCS11" = "true" ]; then
+        echo "[certs] Setting up PKCS#11 token and importing certificates..."
+        
+        # reference.p12 is guaranteed to exist here (created above when ENABLE_PKCS11=true)
+        # Verify setup script exists
+        if [ ! -x "/usr/local/bin/setup-pkcs11.sh" ]; then
+            echo "[certs] ERROR: /usr/local/bin/setup-pkcs11.sh not found or not executable"
+            exit 1
+        fi
+        
+        # Run setup with proper error handling (disable set -e temporarily)
+        set +e
+        /usr/local/bin/setup-pkcs11.sh
+        SETUP_EXIT=$?
+        set -e
+        
+        if [ $SETUP_EXIT -eq 0 ]; then
+            echo "[certs] ✓ PKCS#11 token initialized, certificates imported, and configs created"
+        else
+            echo "[certs] ERROR: PKCS#11 setup failed with exit code $SETUP_EXIT"
+            exit 1
+        fi
+    fi
 
     # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
     if [ "$ENABLE_PKCS11" = "true" ]; then
