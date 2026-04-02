@@ -25,9 +25,9 @@
  *
  * Supports:
  *  - CSR parsing and certificate signing with Test-RDK-xpki-ICA
- *  - mTLS seed-cert authentication (optional, enabled via ENABLE_MTLS)
  *  - Health check endpoint
  *  - Admin endpoints for test control (error injection, request inspection)
+ *
  *
  * Certificate hierarchy used:
  *   Test-RDK-xpki-root -> Test-RDK-xpki-ICA -> signed device cert
