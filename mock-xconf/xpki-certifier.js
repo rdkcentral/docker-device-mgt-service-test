@@ -225,6 +225,24 @@ function handleCertRequest(req, res, body) {
     return sendJson(res, 500, { error: 'Internal server error (injected)', status: 'error' });
   }
 
+  // Handle RENEWAL requests (certificateId present, no CSR)
+  // libcertifier sends certificateId when renewing an existing cert
+  if (params.certificateId && !params.csr) {
+    console.log('[xpki-certifier] Certificate RENEWAL request received:', {
+      certificateId: params.certificateId
+    });
+    console.log('[xpki-certifier] Note: Renewal uses same endpoint as CREATE - libcertifier generates new CSR internally');
+    
+    // In production, xPKI would validate certificateId and generate a renewal cert
+    // For mock testing, we accept the renewal request and it will be re-submitted as CREATE
+    // This simulates the xPKI behavior where renewal triggers a new CSR signing
+    return sendJson(res, 200, {
+      status: 'success',
+      message: 'Renewal acknowledged - proceed with new CSR submission',
+      certificateId: params.certificateId
+    });
+  }
+
   const csrPem = params.csr;
   if (!csrPem) {
     return sendJson(res, 400, { error: 'Missing required parameter: csr', status: 'error' });
