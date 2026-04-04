@@ -348,7 +348,7 @@ function handleRequest(req, res) {
   const isCertEndpoint =
     (req.method === 'POST' && req.url === '/v1/certifier/certificate') ||
     (req.method === 'POST' && req.url === '/api/v1/device-cert') ||
-    (req.method === 'POST' && req.url === '/renew');  // libcertifier renewal endpoint
+    (req.method === 'POST' && req.url === '/v1/certifier/renew');  // libcertifier renewal endpoint
 
   if (isCertEndpoint) {
     let body = '';
