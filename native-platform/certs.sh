@@ -244,31 +244,6 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         fi
     fi
 
-    # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
-    if [ "$ENABLE_PKCS11" = "true" ]; then
-        echo "[certs] Setting up PKCS#11 token and importing certificates..."
-        
-        # reference.p12 is guaranteed to exist here (created above when ENABLE_PKCS11=true)
-        # Verify setup script exists
-        if [ ! -x "/usr/local/bin/setup-pkcs11.sh" ]; then
-            echo "[certs] ERROR: /usr/local/bin/setup-pkcs11.sh not found or not executable"
-            exit 1
-        fi
-        
-        # Run setup with proper error handling (disable set -e temporarily)
-        set +e
-        /usr/local/bin/setup-pkcs11.sh
-        SETUP_EXIT=$?
-        set -e
-        
-        if [ $SETUP_EXIT -eq 0 ]; then
-            echo "[certs] ✓ PKCS#11 token initialized, certificates imported, and configs created"
-        else
-            echo "[certs] ERROR: PKCS#11 setup failed with exit code $SETUP_EXIT"
-            exit 1
-        fi
-    fi
-
     # Create CertSelector configuration file
     echo "[certs] Creating CertSelector configuration file..."
     mkdir -p /etc/ssl/certsel

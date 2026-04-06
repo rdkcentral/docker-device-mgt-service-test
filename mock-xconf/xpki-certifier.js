@@ -87,6 +87,7 @@ const MAX_REQUEST_LOG_ENTRIES = parseInt(process.env.XPKI_MAX_LOG_ENTRIES || '10
 let requestLog = [];
 let forceErrorMode = null;   // null | 'csr_invalid' | 'server_error' | 'rate_limit'
 let requestCount = 0;
+let certCache = {};  // Cache issued certs by certificateId for renewal:  certCache[certId] = { csr, certPem, chain }
 
 // ─── HTTPS server options ─────────────────────────────────────────────────────
 
@@ -231,16 +232,51 @@ function handleCertRequest(req, res, body) {
     console.log('[xpki-certifier] Certificate RENEWAL request received:', {
       certificateId: params.certificateId
     });
-    console.log('[xpki-certifier] Note: Renewal uses same endpoint as CREATE - libcertifier generates new CSR internally');
     
-    // In production, xPKI would validate certificateId and generate a renewal cert
-    // For mock testing, we accept the renewal request and it will be re-submitted as CREATE
-    // This simulates the xPKI behavior where renewal triggers a new CSR signing
-    return sendJson(res, 200, {
-      status: 'success',
-      message: 'Renewal acknowledged - proceed with new CSR submission',
-      certificateId: params.certificateId
-    });
+    // Look up the cached CSR for this certificateId
+    const cachedCert = certCache[params.certificateId];
+    
+    if (!cachedCert || !cachedCert.csr) {
+      console.error('[xpki-certifier] No cached CSR found for certificateId:', params.certificateId);
+      return sendJson(res, 404, {
+        error: 'Certificate not found for renewal',
+        status: 'error',
+        hint: 'CertificateId not in cache. Create the certificate first before renewing.'
+      });
+    }
+    
+    console.log('[xpki-certifier] Found cached CSR - re-signing with same public key');
+    
+    // Re-sign the same CSR to generate a renewal certificate with the same public key
+    let result;
+    try {
+      result = signCsrWithOpenssl(cachedCert.csr, params.validity_days || 90);
+    } catch (err) {
+      console.error('[xpki-certifier] Renewal cert generation failed:', err.message);
+      return sendJson(res, 500, {
+        error: 'Failed to generate renewal certificate',
+        status: 'error'
+      });
+    }
+    
+    const fullChain = [result.certPem, ...result.chain].join('\n');
+    
+    // Update the cache with the new renewed certificate
+    certCache[params.certificateId] = {
+      csr: cachedCert.csr,  // Keep the same CSR
+      certPem: result.certPem,
+      chain: result.chain
+    };
+    
+    const response = {
+      certificate:       result.certPem,
+      certificateChain:  fullChain,
+      status:            'success'
+    };
+    
+    console.log('[xpki-certifier] Renewal certificate issued successfully (same public key as original)');
+    requestCount++;
+    return sendJson(res, 200, response);
   }
 
   const csrPem = params.csr;
@@ -283,6 +319,24 @@ function handleCertRequest(req, res, body) {
   // (in PKCS7 format), but for simplicity we return PEM with leaf cert first
   const fullChain = [result.certPem, ...result.chain].join('\n');
   
+  // Calculate certificateId (SHA1 hash of DER-encoded cert) for renewal cache
+  // Convert PEM to DER by removing headers and base64 decoding
+  const certDer = Buffer.from(
+    result.certPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                   .replace(/-----END CERTIFICATE-----/, '')
+                   .replace(/\s/g, ''),
+    'base64'
+  );
+  const certificateId = crypto.createHash('sha1').update(certDer).digest('hex');
+  
+  // Cache the CSR for potential renewal requests
+  certCache[certificateId] = {
+    csr: csrPem,
+    certPem: result.certPem,
+    chain: result.chain
+  };
+  console.log(`[xpki-certifier] Cached cert for renewal with ID: ${certificateId}`);
+  
   const response = {
     certificate:       result.certPem,           // Leaf cert (for backward compatibility)
     certificateChain:  fullChain,                 // Leaf + ICA + root (production format)
@@ -302,6 +356,7 @@ function handleAdmin(req, res) {
     requestLog   = [];
     forceErrorMode = null;
     requestCount   = 0;
+    certCache    = {};  // Clear certificate cache
     return sendJson(res, 200, { message: 'State reset', status: 'ok' });
   }
   if (action === 'setError') {
