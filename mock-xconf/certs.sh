@@ -147,7 +147,7 @@ SEED_KEY="$SEED_CERT_DIR/seed-cert.key"
 SEED_CSR="$SEED_CERT_DIR/seed-cert.csr"
 SEED_CERT="$SEED_CERT_DIR/seed-cert.pem"
 SEED_P12="$SEED_CERT_DIR/seed-cert.p12"
-SEED_PASSWORD="seedpass"
+SEED_PASSWORD=${SEED_PASSWORD:-seedpass}
 
 # Generate seed certificate key
 openssl ecparam -genkey -name prime256v1 -noout -out "$SEED_KEY"
