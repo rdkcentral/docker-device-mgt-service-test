@@ -202,9 +202,9 @@ for f in "$SEED_KEY" "$SEED_CERT" "$SEED_P12"; do
 done
 
 echo "[certs] Seed certificate generated successfully:"
-echo "[certs]   - P12: $SEED_P12 (password: $SEED_PASSWORD)"
+echo "[certs]   - P12: $SEED_P12"
 echo "[certs]   - PEM: $SEED_CERT"
-echo "[certs]   - Key: $SEED_KEY"
+# Note: Seed private key path and password are intentionally not logged to avoid exposing secrets
 echo "[certs] Seed certificate ready for xPKI seed-scope testing"
 
 # Copy xpki root cert to shared volume so native-platform can trust it
