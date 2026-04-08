@@ -28,6 +28,10 @@
  *  - Health check endpoint
  *  - Admin endpoints for test control (error injection, request inspection)
  *
+ * Security Note:
+ *  - mTLS is intentionally NOT enabled for this service
+ *  - Clients need to obtain certificates BEFORE they can present them for mTLS
+ *  - Admin endpoints are unauthenticated (test-only service, not for production)
  *
  * Certificate hierarchy used:
  *   Test-RDK-xpki-root -> Test-RDK-xpki-ICA -> signed device cert
@@ -83,19 +87,24 @@ for (const f of tlsFiles) {
 // Request logging settings (cap the log to avoid unbounded growth)
 const ENABLE_REQUEST_LOG = (process.env.XPKI_ENABLE_REQUEST_LOG || 'true') === 'true';
 const MAX_REQUEST_LOG_ENTRIES = parseInt(process.env.XPKI_MAX_LOG_ENTRIES || '1000', 10) || 1000;
+const ENABLE_CSR_DEBUG_LOGGING = (process.env.XPKI_DEBUG_CSR || 'false') === 'true';
+
+// Certificate cache settings (prevent unbounded memory growth)
+const MAX_CERT_CACHE_SIZE = parseInt(process.env.XPKI_MAX_CACHE_SIZE || '10000', 10) || 10000;
 
 let requestLog = [];
 let forceErrorMode = null;   // null | 'csr_invalid' | 'server_error' | 'rate_limit'
 let requestCount = 0;
 let certCache = {};  // Cache issued certs by certificateId for renewal:  certCache[certId] = { csr, certPem, chain }
+let certCacheKeys = [];  // Track insertion order for LRU eviction
 
 // ─── HTTPS server options ─────────────────────────────────────────────────────
 
 console.log('[xpki-certifier] Loading TLS certificates for HTTPS server...');
 const options = {
   key:  fs.readFileSync(SERVER_KEY),
-  cert: fs.readFileSync(SERVER_CERT),
-  port: PORT
+  cert: fs.readFileSync(SERVER_CERT)
+  // Note: port is set via server.listen(PORT), not in options
 };
 console.log('[xpki-certifier] TLS certificates loaded successfully');
 
@@ -135,7 +144,10 @@ function signCsrWithOpenssl(csrPem, validityDays) {
     const base64Formatted = base64Clean.match(/.{1,64}/g).join('\n');
     formattedCsr = `-----BEGIN CERTIFICATE REQUEST-----\n${base64Formatted}\n-----END CERTIFICATE REQUEST-----\n`;
     console.log('[xpki-certifier] Converted base64 CSR to PEM format');
-    console.log(`[xpki-certifier] CSR preview (first 100 chars): ${formattedCsr.substring(0, 100)}...`);
+    // CSR preview can leak subject/SAN info - only log when explicitly enabled
+    if (ENABLE_CSR_DEBUG_LOGGING) {
+      console.log(`[xpki-certifier] CSR preview (first 100 chars): ${formattedCsr.substring(0, 100)}...`);
+    }
   }
 
   fs.writeFileSync(csrPath, formattedCsr, { mode: 0o600 });
@@ -329,7 +341,16 @@ function handleCertRequest(req, res, body) {
   );
   const certificateId = crypto.createHash('sha256').update(certDer).digest('hex');
   
-  // Cache the CSR for potential renewal requests
+  // Cache the CSR for potential renewal requests (with LRU eviction)
+  if (!certCache[certificateId]) {
+    certCacheKeys.push(certificateId);
+    // Evict oldest entry if cache is full (LRU policy)
+    if (certCacheKeys.length > MAX_CERT_CACHE_SIZE) {
+      const oldestKey = certCacheKeys.shift();
+      delete certCache[oldestKey];
+      console.log(`[xpki-certifier] Evicted oldest cached cert: ${oldestKey} (cache limit: ${MAX_CERT_CACHE_SIZE})`);
+    }
+  }
   certCache[certificateId] = {
     csr: csrPem,
     certPem: result.certPem,
@@ -357,6 +378,7 @@ function handleAdmin(req, res) {
     forceErrorMode = null;
     requestCount   = 0;
     certCache    = {};  // Clear certificate cache
+    certCacheKeys = [];  // Clear cache key tracking
     return sendJson(res, 200, { message: 'State reset', status: 'ok' });
   }
   if (action === 'setError') {
@@ -401,6 +423,8 @@ function handleRequest(req, res) {
   }
 
   // Admin control endpoint (for test orchestration)
+  // WARNING: Unauthenticated endpoint - acceptable for test/mock service only
+  // Production deployments should implement authentication/authorization
   if (req.method === 'GET' && req.url.startsWith('/admin/xpkiCertifier')) {
     return handleAdmin(req, res);
   }
