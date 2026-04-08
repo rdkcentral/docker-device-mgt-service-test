@@ -82,8 +82,6 @@ RUN cd /opt && git clone -b feature/RDK-60640 https://github.com/rdkcentral/rdk-
     mkdir -p /opt/patches && cp /usr/local/share/patches/pkcs11_migration_support_p12.patch /opt/patches/ && \
     cd .. && rm -rf /opt/rdk-cert-config
 
-
-
 # Certificate will be installed at runtime from shared volume directly to /usr/share/ca-certificates/
 
 # Build and install test binary that acts as a provider for all mandatory RFC parameters
