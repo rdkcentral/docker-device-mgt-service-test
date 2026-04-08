@@ -42,11 +42,17 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
         exit 1
     fi
 
-    # Wait for the root CA to be available from server (intermediate is optional)
+    # Wait for the root CA and intermediate CA to be available from server
     echo "[certs] Waiting for server root CA..."
     while [ ! -f "$SHARED_CERTS_DIR/server/root_ca.pem" ]; do
         sleep 1
         echo "[certs] Waiting for server root CA..."
+    done
+    
+    # Wait for intermediate CA (required for complete chain validation)
+    echo "[certs] Waiting for server intermediate CA..."
+    while [ ! -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; do
+        sleep 1
     done
 
     # Copy root CA to system trust store
@@ -54,22 +60,34 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
     
     # Copy intermediate CA to system trust store
-    if [ -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; then
-        cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-        chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-        grep -qxF "mock-xconf-intermediate-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
-            echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
+    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+    
+    # Copy xpki root CA to system trust store (for xPKI-issued certs)
+    if [ -f "$SHARED_CERTS_DIR/server/xpki-root.pem" ]; then
+        cp "$SHARED_CERTS_DIR/server/xpki-root.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem
+        chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem
+        echo "[certs] xPKI root CA certificate imported"
     fi
     
-    # Register CA certificates and update system trust store
+    # Register CA certificates in config
     grep -qxF "mock-xconf-root-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
         echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
+    grep -qxF "mock-xconf-intermediate-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
+    if [ -f "${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem" ]; then
+        grep -qxF "mock-xconf-xpki-root-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
+            echo "mock-xconf-xpki-root-ca.pem" >> /etc/ca-certificates.conf
+    fi
+    
+    # Update system trust store
     /usr/sbin/update-ca-certificates --fresh
     echo "[certs] System CA trust store updated"
 
     # Cleanup shared server certs after import
     rm -f "$SHARED_CERTS_DIR/server/root_ca.pem" \
-        "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
+        "$SHARED_CERTS_DIR/server/intermediate_ca.pem" \
+        "$SHARED_CERTS_DIR/server/xpki-root.pem"
 
     echo "[certs] Server CA certificates imported"
 else
@@ -206,7 +224,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         echo "[certs] Waiting for xPKI seed certificate from mock-xconf..."
         WAIT_COUNT=0
         MAX_WAIT=30
-        while [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] && [ $WAIT_COUNT -lt $MAX_WAIT ]; do
+        # Wait for both PEM and key to be present
+        while [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] || [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.key" ]; do
+            if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+                break
+            fi
             sleep 1
             WAIT_COUNT=$((WAIT_COUNT + 1))
         done

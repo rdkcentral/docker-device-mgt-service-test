@@ -319,7 +319,7 @@ function handleCertRequest(req, res, body) {
   // (in PKCS7 format), but for simplicity we return PEM with leaf cert first
   const fullChain = [result.certPem, ...result.chain].join('\n');
   
-  // Calculate certificateId (SHA1 hash of DER-encoded cert) for renewal cache
+  // Calculate certificateId (SHA-256 hash of DER-encoded cert) for renewal cache
   // Convert PEM to DER by removing headers and base64 decoding
   const certDer = Buffer.from(
     result.certPem.replace(/-----BEGIN CERTIFICATE-----/, '')
@@ -327,7 +327,7 @@ function handleCertRequest(req, res, body) {
                    .replace(/\s/g, ''),
     'base64'
   );
-  const certificateId = crypto.createHash('sha1').update(certDer).digest('hex');
+  const certificateId = crypto.createHash('sha256').update(certDer).digest('hex');
   
   // Cache the CSR for potential renewal requests
   certCache[certificateId] = {
@@ -373,12 +373,18 @@ function handleAdmin(req, res) {
 function handleRequest(req, res) {
   console.log(`[xpki-certifier] ${req.method} ${req.url}`);
 
-  // Log request for test inspection
-  requestLog.push({
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    url: req.url
-  });
+  // Log request for test inspection (with capping to prevent unbounded growth)
+  if (ENABLE_REQUEST_LOG) {
+    requestLog.push({
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.url
+    });
+    // Enforce max log entries (ring buffer - drop oldest)
+    if (requestLog.length > MAX_REQUEST_LOG_ENTRIES) {
+      requestLog = requestLog.slice(-MAX_REQUEST_LOG_ENTRIES);
+    }
+  }
 
   // CORS pre-flight
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -407,7 +413,15 @@ function handleRequest(req, res) {
 
   if (isCertEndpoint) {
     let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
+    const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB limit
+    req.on('data', chunk => {
+      body += chunk.toString();
+      // Abort on oversized body to prevent memory exhaustion
+      if (body.length > MAX_BODY_SIZE) {
+        req.destroy();
+        return sendJson(res, 413, { error: 'Request body too large', status: 'error' });
+      }
+    });
     req.on('end', () => handleCertRequest(req, res, body));
     return;
   }

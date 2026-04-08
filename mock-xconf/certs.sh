@@ -61,6 +61,7 @@ mkdir -p "$SHARED_CERTS_DIR/server"
 
 # Copy the server certificates to the xconf certs directory
 cp "$SERVER_KEY" /etc/xconf/certs/mock-xconf-server-key.pem
+chmod 600 /etc/xconf/certs/mock-xconf-server-key.pem
 cp "$SERVER_CERT" /etc/xconf/certs/mock-xconf-server-cert.pem
 echo "[certs] Server certificates generated and copied to /etc/xconf/certs"
 
@@ -86,6 +87,7 @@ XPKI_ICA_CERT="$XPKI_DIR/Test-RDK-xpki-ICA.pem"
 
 # Generate xpki root CA key and self-signed cert
 openssl ecparam -genkey -name prime256v1 -noout -out "$XPKI_ROOT_KEY"
+chmod 600 "$XPKI_ROOT_KEY"
 openssl req -new -x509 -key "$XPKI_ROOT_KEY" \
     -out "$XPKI_ROOT_CERT" \
     -days 3650 -sha256 \
@@ -95,6 +97,7 @@ openssl req -new -x509 -key "$XPKI_ROOT_KEY" \
 
 # Generate xpki ICA key
 openssl ecparam -genkey -name prime256v1 -noout -out "$XPKI_ICA_KEY"
+chmod 600 "$XPKI_ICA_KEY"
 
 # Create ICA CSR
 openssl req -new -key "$XPKI_ICA_KEY" \
@@ -148,6 +151,7 @@ SEED_PASSWORD="seedpass"
 
 # Generate seed certificate key
 openssl ecparam -genkey -name prime256v1 -noout -out "$SEED_KEY"
+chmod 600 "$SEED_KEY"
 
 # Create seed certificate CSR
 openssl req -new -key "$SEED_KEY" \
