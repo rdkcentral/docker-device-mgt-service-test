@@ -239,7 +239,8 @@ function handleCertRequest(req, res, body) {
   }
 
   // Handle RENEWAL requests (certificateId present, no CSR)
-  // libcertifier sends certificateId when renewing an existing cert
+  // libcertifier sends certificateId (SHA-1 hash of certificate DER) when renewing an existing cert
+  // NOTE: certificateId must be SHA-1 to match libcertifier - see hash calculation below for details
   if (params.certificateId && !params.csr) {
     console.log('[xpki-certifier] Certificate RENEWAL request received:', {
       certificateId: params.certificateId
@@ -332,7 +333,30 @@ function handleCertRequest(req, res, body) {
   const fullChain = [result.certPem, ...result.chain].join('\n');
   
   // Calculate certificateId (SHA-1 hash of DER-encoded cert) for renewal cache
-  // NOTE: Must use SHA-1 to match libcertifier's security_sha1() implementation
+  // 
+  // IMPORTANT: Must use SHA-1 (not SHA-256) to maintain compatibility with libcertifier
+  // 
+  // Rationale:
+  //   - libcertifier calculates certificateId using security_sha1() (see certifier.c line 344)
+  //   - Renewal requests send this SHA-1 hash to lookup the cached CSR
+  //   - If we use SHA-256 here, the hashes won't match and renewal will fail with 404
+  //   - This was discovered when Copilot security review changed SHA-1 to SHA-256
+  //   - Tests passed initially but renewal broke because:
+  //       CREATE test: xpki-certifier caches cert with SHA-256 hash (64 hex chars)
+  //       RENEW test:  libcertifier sends SHA-1 hash (40 hex chars)
+  //       Result:      404 "Certificate not found for renewal"
+  // 
+  // Security Note:
+  //   - SHA-1 is deprecated for digital signatures but acceptable for non-cryptographic
+  //     identifiers where collision resistance requirements are lower
+  //   - The certificateId is used only as a cache lookup key, not for security validation
+  //   - The actual certificate validation uses proper signature verification
+  // 
+  // To upgrade to SHA-256:
+  //   - libcertifier must be updated to use SHA-256 (change security_sha1 to security_sha256)
+  //   - Both client and server must change simultaneously to avoid breakage
+  //   - Coordinate with libcertifier maintainers before changing this
+  //
   // Convert PEM to DER by removing headers and base64 decoding
   const certDer = Buffer.from(
     result.certPem.replace(/-----BEGIN CERTIFICATE-----/, '')
