@@ -331,7 +331,8 @@ function handleCertRequest(req, res, body) {
   // (in PKCS7 format), but for simplicity we return PEM with leaf cert first
   const fullChain = [result.certPem, ...result.chain].join('\n');
   
-  // Calculate certificateId (SHA-256 hash of DER-encoded cert) for renewal cache
+  // Calculate certificateId (SHA-1 hash of DER-encoded cert) for renewal cache
+  // NOTE: Must use SHA-1 to match libcertifier's security_sha1() implementation
   // Convert PEM to DER by removing headers and base64 decoding
   const certDer = Buffer.from(
     result.certPem.replace(/-----BEGIN CERTIFICATE-----/, '')
@@ -339,7 +340,7 @@ function handleCertRequest(req, res, body) {
                    .replace(/\s/g, ''),
     'base64'
   );
-  const certificateId = crypto.createHash('sha256').update(certDer).digest('hex');
+  const certificateId = crypto.createHash('sha1').update(certDer).digest('hex');
   
   // Cache the CSR for potential renewal requests (with LRU eviction)
   if (!certCache[certificateId]) {
