@@ -239,6 +239,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         done
         
         if [ -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] && [ -f "$SHARED_CERTS_DIR/client/seed-cert.key" ]; then
+            # Copy seed cert to /opt/certs for PKCS#11 provisioning
+            cp "$SHARED_CERTS_DIR/client/seed-cert.pem" /opt/certs/
+            cp "$SHARED_CERTS_DIR/client/seed-cert.key" /opt/certs/
+            cp "$SHARED_CERTS_DIR/client/seed-cert.p12" /opt/certs/
+            chmod 600 /opt/certs/seed-cert.key
             echo "[certs] ✓ xPKI seed certificate available for PKCS#11 provisioning"
         else
             echo "[certs] ⚠ xPKI seed certificate not available (timeout after ${MAX_WAIT}s)"
