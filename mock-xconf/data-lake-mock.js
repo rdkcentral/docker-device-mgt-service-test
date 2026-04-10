@@ -131,10 +131,27 @@ function requestHandler(req, res) {
 
 
 const serverinstance = https.createServer(options, requestHandler);
-serverinstance.listen(
-  options.port,
-  () => {
-    console.log('Data Lake Mock Server running at https://localhost:50051/');
-  }
-);
+
+serverinstance.on('error', (err) => {
+  console.error('[DataLake:50051] Server error:', err.message);
+});
+serverinstance.on('tlsClientError', (err, tlsSocket) => {
+  console.error('[DataLake:50051] TLS error:', err.message, 'code:', err.code);
+});
+serverinstance.on('clientError', (err, socket) => {
+  console.error('[DataLake:50051] Client error:', err.message);
+  if (!socket.destroyed) socket.end('HTTP/1.1 400\r\n\r\n');
+});
+serverinstance.on('secureConnection', (tlsSocket) => {
+  const cert = tlsSocket.getPeerCertificate();
+  console.log('[DataLake:50051] ✓ TLS from', cert.subject ? cert.subject.CN : 'no-cert');
+});
+serverinstance.on('request', (req) => {
+  console.log(`[DataLake:50051] → ${req.method} ${req.url}`);
+});
+
+serverinstance.listen(options.port, () => {
+  console.log('[DataLake:50051] Server started on https://localhost:50051/');
+  console.log(`[DataLake:50051] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'ENABLED' : 'DISABLED'}`);
+});
 

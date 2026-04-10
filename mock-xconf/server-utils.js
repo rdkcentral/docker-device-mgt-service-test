@@ -38,14 +38,28 @@ function isMtlsEnabled() {
 function applyMtlsConfig(options) {
   const mtlsEnabled = isMtlsEnabled();
   
+  console.log(`[server-utils] mTLS enabled: ${mtlsEnabled}`);
+  console.log(`[server-utils] CA chain path: ${CA_CHAIN_PATH}`);
+  console.log(`[server-utils] CA chain exists: ${fs.existsSync(CA_CHAIN_PATH)}`);
+  
   // Add mTLS settings if enabled
   if (mtlsEnabled && fs.existsSync(CA_CHAIN_PATH)) {
-    options.ca = fs.readFileSync(CA_CHAIN_PATH);
+    const caChain = fs.readFileSync(CA_CHAIN_PATH);
+    const certCount = (caChain.toString().match(/BEGIN CERTIFICATE/g) || []).length;
+    console.log(`[server-utils] Loaded ${certCount} CA certificates from trust store`);
+    
+    options.ca = caChain;
     options.requestCert = true;
     options.rejectUnauthorized = true;
-    console.log('mTLS configuration loaded successfully with CA chain');
+    
+    console.log('[server-utils] mTLS configuration applied:');
+    console.log('[server-utils]   - requestCert: true');
+    console.log('[server-utils]   - rejectUnauthorized: true');
+    console.log(`[server-utils]   - CA certs loaded: ${certCount}`);
   } else if (mtlsEnabled) {
-    console.warn('mTLS is enabled but CA chain file not found in trust store');
+    console.warn('[server-utils] WARNING: mTLS enabled but CA chain file not found!');
+  } else {
+    console.log('[server-utils] mTLS disabled - no client cert validation');
   }
   
   return options;

@@ -174,9 +174,27 @@ else if (req.method === 'POST') {
   res.end("Server is Up Please check the request....");
 }
 const serverInstance = https.createServer(options, requestHandler);
-serverInstance.listen(
-  options.port,
-  () => {
-    console.log('XCONF DCM Mock Server running at https://localhost:50050/');
-  }
-);
+
+// Add error handlers for debugging
+serverInstance.on('error', (err) => {
+  console.error('[T2DCM:50050] Server error:', err.message);
+});
+serverInstance.on('tlsClientError', (err, tlsSocket) => {
+  console.error('[T2DCM:50050] TLS error:', err.message, 'code:', err.code);
+});
+serverInstance.on('clientError', (err, socket) => {
+  console.error('[T2DCM:50050] Client error:', err.message);
+  if (!socket.destroyed) socket.end('HTTP/1.1 400\r\n\r\n');
+});
+serverInstance.on('secureConnection', (tlsSocket) => {
+  const cert = tlsSocket.getPeerCertificate();
+  console.log('[T2DCM:50050] ✓ TLS from', cert.subject ? cert.subject.CN : 'no-cert');
+});
+serverInstance.on('request', (req) => {
+  console.log(`[T2DCM:50050] → ${req.method} ${req.url}`);
+});
+
+serverInstance.listen(options.port, () => {
+  console.log('[T2DCM:50050] Server started on https://localhost:50050/');
+  console.log(`[T2DCM:50050] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'ENABLED' : 'DISABLED'}`);
+});
