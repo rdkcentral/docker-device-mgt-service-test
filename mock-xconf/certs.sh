@@ -137,16 +137,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
         echo "[certs] Client certificate chain found - importing to trust store"
-        # Import client ICA chain (Test-RDK-client-ICA + root)
+        # Import client ICA chain (Test-RDK-client-ICA + root from native-platform)
         cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
         rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
         
-        # Also add server ICA to trust store (for xPKI seed cert authentication)
-        # Seed certs signed by Test-RDK-server-ICA must also be trusted
-        cat "$ICA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
-        
         echo "[certs] Client CA chain imported to trust store"
-        echo "[certs] Server ICA added to trust store (for xPKI seed cert validation)"
         echo "[certs] mTLS certificate trust flow established"
     fi
 fi
