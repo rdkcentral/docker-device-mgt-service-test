@@ -97,10 +97,13 @@ chmod 600 "$XPKI_DIR/Test-RDK-xpki-ICA.key"
     --type client
 
 # Export seed cert to shared volume for native-platform
-SEED_SOURCE="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/test-seed-device-001"
-cp "${SEED_SOURCE}/private/test-seed-device-001.key" "$SEED_CERT_DIR/seed-cert.key"
-cp "${SEED_SOURCE}/certs/test-seed-device-001.pem" "$SEED_CERT_DIR/seed-cert.pem"
-cp "${SEED_SOURCE}/certs/test-seed-device-001.p12" "$SEED_CERT_DIR/seed-cert.p12"
+SEED_KEY="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/test-seed-device-001.key"
+SEED_CERT="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/test-seed-device-001.pem"
+SEED_P12="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/test-seed-device-001.p12"
+
+cp "$SEED_KEY" "$SEED_CERT_DIR/seed-cert.key"
+cp "$SEED_CERT" "$SEED_CERT_DIR/seed-cert.pem"
+cp "$SEED_P12" "$SEED_CERT_DIR/seed-cert.p12"
 
 chmod 644 "$SEED_CERT_DIR/seed-cert.pem" "$SEED_CERT_DIR/seed-cert.p12"
 chmod 600 "$SEED_CERT_DIR/seed-cert.key"
