@@ -280,19 +280,14 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] Creating CertSelector configuration file..."
     mkdir -p /etc/ssl/certsel
     
-    # Truncate/create file to avoid stale entries from previous runs
     # Add reference.p12 first if PKCS#11 enabled (for hardware-backed certs)
     if [ "$ENABLE_PKCS11" = "true" ]; then
         echo "MTLS|SRVR_TLS,REFERENCE_P12,P12,file:///opt/certs/reference.p12,cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
         echo "[certs] ✓ Added PKCS#11 reference cert as primary"
-        # Add standard client certificates as fallback
-        echo "MTLS|SRVR_TLS,CLIENT_P12,P12,file://${DEFAULT_P12},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
-    else
-        # No PKCS#11: standard certificates are primary (truncate file with >)
-        echo "MTLS|SRVR_TLS,CLIENT_P12,P12,file://${DEFAULT_P12},cfgOpsCert" > /etc/ssl/certsel/certsel.cfg
     fi
     
-    # Always add PEM option (append mode)
+    # Add standard client certificates (primary if no PKCS#11, fallback if PKCS#11 enabled)
+    echo "MTLS|SRVR_TLS,CLIENT_P12,P12,file://${DEFAULT_P12},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
     echo "MTLS_PEM,CLIENT_PEM,PEM,file://${DEFAULT_PEM},cfgOpsCert" >> /etc/ssl/certsel/certsel.cfg
 
     echo "[certs] mTLS certificate trust flow established"
