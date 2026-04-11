@@ -173,46 +173,7 @@ function requestHandler(req, res) {
 // Create HTTPS server
 const server = https.createServer(options, requestHandler);
 
-// Add comprehensive error and connection handlers
-server.on('error', (err) => {
-  console.error('[XCONF:50052] Server error:', err.message);
-  console.error('[XCONF:50052] Error stack:', err.stack);
-});
-
-server.on('tlsClientError', (err, tlsSocket) => {
-  console.error('[XCONF:50052] TLS client error:', err.message);
-  console.error('[XCONF:50052] Error code:', err.code);
-  if (tlsSocket && tlsSocket.remoteAddress) {
-    console.error('[XCONF:50052] Client address:', tlsSocket.remoteAddress);
-  }
-});
-
-server.on('clientError', (err, socket) => {
-  console.error('[XCONF:50052] Client error:', err.message);
-  console.error('[XCONF:50052] Error code:', err.code);
-  if (!socket.destroyed) {
-    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
-  }
-});
-
-server.on('secureConnection', (tlsSocket) => {
-  const cert = tlsSocket.getPeerCertificate();
-  if (cert && cert.subject) {
-    console.log('[XCONF:50052] ✓ TLS connection established');
-    console.log('[XCONF:50052]   Client cert CN:', cert.subject.CN);
-    console.log('[XCONF:50052]   Issuer:', cert.issuer.CN);
-  } else {
-    console.log('[XCONF:50052] ✓ TLS connection (no client cert)');
-  }
-});
-
-server.on('request', (req, res) => {
-  console.log(`[XCONF:50052] → ${req.method} ${req.url}`);
-});
-
 // Start the server
 server.listen(options.port, () => {
-  console.log(`[XCONF:50052] Server started`);
-  console.log(`[XCONF:50052] Listening on https://localhost:${options.port}/`);
-  console.log(`[XCONF:50052] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`XCONF Mock Server running at https://localhost:${options.port}/`);
 });
