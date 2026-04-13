@@ -61,7 +61,6 @@ def test_node_processes_running_mockxconf(container):
     node_process_count = int(output.strip())  # Convert output to integer
     print(f"Found {node_process_count} Node.js processes running in {container.name}")
 
-    # RDK-61060: Updated from 8 to 9 processes (added xpki-certifier.js on port 50055)
     assert node_process_count == 9, f"Expected 9 Node.js processes, but found {node_process_count}!"
     print(f"✅ All 9 Node.js processes are running in {container.name}")
 
