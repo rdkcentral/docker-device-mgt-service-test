@@ -126,6 +126,13 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     # Import client CA chain to trust store and clean it up from shared volume
     cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
     rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    # Operational certs are signed by Test-RDK-server-ICA which has a DIFFERENT root
+    # than the client certificates, so we need the complete server chain
+    if [ -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ] && [ -f "$SHARED_CERTS_DIR/server/root_ca.pem" ]; then
+        cat "$SHARED_CERTS_DIR/server/intermediate_ca.pem" >> /etc/xconf/trust-store/ca-chain.pem
+        cat "$SHARED_CERTS_DIR/server/root_ca.pem" >> /etc/xconf/trust-store/ca-chain.pem
+        echo "[certs] Server CA chain (ICA + root) appended to trust store for operational certificates"
+    fi
     echo "[certs] Client CA chain imported to trust store"
     echo "[certs] mTLS certificate trust flow established"
 fi
