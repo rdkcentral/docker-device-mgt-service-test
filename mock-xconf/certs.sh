@@ -121,7 +121,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     MTLS_WAIT_TIMEOUT=${MTLS_WAIT_TIMEOUT:-120}
     MTLS_WAITED=0
 
-    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
+    # Wait for file to exist AND be non-empty (fully written)
+    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ] || [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
         sleep 1
         MTLS_WAITED=$((MTLS_WAITED + 1))
         if [ $((MTLS_WAITED % 10)) -eq 0 ]; then
@@ -135,14 +136,22 @@ if [ "$ENABLE_MTLS" = "true" ]; then
         fi
     done
 
-    if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
+    if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ] && [ -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
         echo "[certs] Client certificate chain found - importing to trust store"
         # Import client ICA chain (Test-RDK-client-ICA + root from native-platform)
         cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
-        rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
         
-        echo "[certs] Client CA chain imported to trust store"
-        echo "[certs] mTLS certificate trust flow established"
+        # Verify copy succeeded and destination is non-empty
+        if [ -s "/etc/xconf/trust-store/ca-chain.pem" ]; then
+            echo "[certs] Client CA chain imported to trust store ($(wc -c < /etc/xconf/trust-store/ca-chain.pem) bytes)"
+            # Only delete source after successful copy
+            rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+            echo "[certs] mTLS certificate trust flow established"
+        else
+            echo "[certs] ERROR: Failed to copy client CA chain (destination is empty)" >&2
+            echo "[certs] Source file size: $(wc -c < "$SHARED_CERTS_DIR/client/ca-chain.pem") bytes" >&2
+            exit 1
+        fi
     fi
 fi
 
