@@ -42,17 +42,11 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
         exit 1
     fi
 
-    # Wait for the root CA and intermediate CA to be available from server
+    # Wait for the root CA to be available from server (intermediate is optional)
     echo "[certs] Waiting for server root CA..."
     while [ ! -f "$SHARED_CERTS_DIR/server/root_ca.pem" ]; do
         sleep 1
         echo "[certs] Waiting for server root CA..."
-    done
-    
-    # Wait for intermediate CA (required for complete chain validation)
-    echo "[certs] Waiting for server intermediate CA..."
-    while [ ! -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; do
-        sleep 1
     done
 
     # Copy root CA to system trust store
@@ -60,33 +54,22 @@ if getent ahosts "$MOCKXCONF_HOST" >/dev/null 2>&1; then
     chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-root-ca.pem
     
     # Copy intermediate CA to system trust store
-    cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-    chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
-    
-    # Copy xpki root CA to system trust store (for xPKI-issued certs)
-    if [ -f "$SHARED_CERTS_DIR/server/xpki-root.pem" ]; then
-        cp "$SHARED_CERTS_DIR/server/xpki-root.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem
-        chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem
-        echo "[certs] xPKI root CA certificate imported"
+    if [ -f "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ]; then
+        cp "$SHARED_CERTS_DIR/server/intermediate_ca.pem" ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+        chmod 644 ${SYSTEM_TRUST_STORE}/mock-xconf-intermediate-ca.pem
+        grep -qxF "mock-xconf-intermediate-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
+            echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
     fi
     
-    # Register CA certificates in config
+    # Register CA certificates and update system trust store
     grep -qxF "mock-xconf-root-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
         echo "mock-xconf-root-ca.pem" >> /etc/ca-certificates.conf
-    grep -qxF "mock-xconf-intermediate-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
-        echo "mock-xconf-intermediate-ca.pem" >> /etc/ca-certificates.conf
-    if [ -f "${SYSTEM_TRUST_STORE}/mock-xconf-xpki-root-ca.pem" ]; then
-        grep -qxF "mock-xconf-xpki-root-ca.pem" /etc/ca-certificates.conf 2>/dev/null || \
-            echo "mock-xconf-xpki-root-ca.pem" >> /etc/ca-certificates.conf
-    fi
-    
-    # Update system trust store
     /usr/sbin/update-ca-certificates --fresh
     echo "[certs] System CA trust store updated"
 
-    # Note: Shared server certs are left in place to support container restarts
-    # If mockxconf stays running but native-platform restarts, we need these files
-    # available. They will be regenerated on mockxconf restart anyway.
+    # Cleanup shared server certs after import
+    rm -f "$SHARED_CERTS_DIR/server/root_ca.pem" \
+        "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 
     echo "[certs] Server CA certificates imported"
 else
@@ -144,14 +127,8 @@ if [ "$ENABLE_MTLS" = "true" ]; then
                 exit 1
             fi
         else
-            # Marker exists, verify OpenSSL binary is available
-            if command -v /usr/local/bin/openssl >/dev/null 2>&1; then
-                OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
-                echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch already ready (cached)"
-            else
-                echo "[certs] WARNING: PKCS#11 marker exists but OpenSSL binary not found"
-                echo "[certs] Proceeding with system OpenSSL (PKCS#11 patch may be unavailable)"
-            fi
+            OPENSSL_VERSION=$(/usr/local/bin/openssl version 2>/dev/null | awk '{print $2}')
+            echo "[certs] ${OPENSSL_VERSION} with PKCS#11 patch already ready (cached)"
         fi
     fi
 
