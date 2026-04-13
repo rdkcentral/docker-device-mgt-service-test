@@ -111,48 +111,23 @@ chmod 600 "$SEED_CERT_DIR/seed-cert.key"
 echo "[certs] ✓ Seed certificate generated and exported to shared volume"
 echo "[certs] ✓ xPKI Certifier configured (uses Test-RDK-server-ICA)"
 
-# ─── mTLS: wait for client certificates (with timeout) ────────────────────────
-# This must come AFTER XPKI/seed generation so that xpki-certifier.js can start
-# even if client certs never arrive (standalone/dev mode).
-
+# If mTLS is enabled at startup, wait for client certificates
 if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS enabled - waiting for client certificates..."
 
-    MTLS_WAIT_TIMEOUT=${MTLS_WAIT_TIMEOUT:-120}
-    MTLS_WAITED=0
-
-    # Wait for file to exist AND be non-empty (fully written)
-    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ] || [ ! -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
+    # Wait for client certificate chain
+    while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
         sleep 1
-        MTLS_WAITED=$((MTLS_WAITED + 1))
-        if [ $((MTLS_WAITED % 10)) -eq 0 ]; then
-            echo "[certs] Waiting for client certificates... (${MTLS_WAITED}s / ${MTLS_WAIT_TIMEOUT}s)"
-        fi
-        if [ "$MTLS_WAITED" -ge "$MTLS_WAIT_TIMEOUT" ]; then
-            echo "[certs] WARNING: mTLS client certificate wait timed out after ${MTLS_WAIT_TIMEOUT}s"
-            echo "[certs] Services will start WITHOUT mTLS client verification."
-            echo "[certs] Set MTLS_WAIT_TIMEOUT to increase, or ensure native-platform is running."
-            break
-        fi
+        echo "[certs] Waiting for client certificates..."
     done
 
-    if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ] && [ -s "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
-        echo "[certs] Client certificate chain found - importing to trust store"
-        # Import client ICA chain (Test-RDK-client-ICA + root from native-platform)
-        cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
-        
-        # Verify copy succeeded and destination is non-empty
-        if [ -s "/etc/xconf/trust-store/ca-chain.pem" ]; then
-            echo "[certs] Client CA chain imported to trust store ($(wc -c < /etc/xconf/trust-store/ca-chain.pem) bytes)"
-            # Only delete source after successful copy
-            rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
-            echo "[certs] mTLS certificate trust flow established"
-        else
-            echo "[certs] ERROR: Failed to copy client CA chain (destination is empty)" >&2
-            echo "[certs] Source file size: $(wc -c < "$SHARED_CERTS_DIR/client/ca-chain.pem") bytes" >&2
-            exit 1
-        fi
-    fi
+    echo "[certs] Client certificate chain found - importing to trust store"
+
+    # Import client CA chain to trust store and clean it up from shared volume
+    cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
+    rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    echo "[certs] Client CA chain imported to trust store"
+    echo "[certs] mTLS certificate trust flow established"
 fi
 
 exit 0
