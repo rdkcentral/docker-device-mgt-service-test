@@ -61,8 +61,5 @@ else
 	ls -la /usr/local/bin/xpki* || echo "No xpki files in /usr/local/bin"
 fi
 
-## Signal handler for clean shutdown of background processes
-trap 'echo "[entrypoint] Received shutdown signal, stopping services..."; kill $(jobs -p) 2>/dev/null; exit 0' TERM INT
-
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
 while true ; do echo "Mocked webservice heartbeat ..." && sleep 5 ; done
