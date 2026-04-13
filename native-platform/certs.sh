@@ -242,7 +242,11 @@ if [ "$ENABLE_MTLS" = "true" ]; then
             # Copy seed cert to /opt/certs for PKCS#11 provisioning
             cp "$SHARED_CERTS_DIR/client/seed-cert.pem" /opt/certs/
             cp "$SHARED_CERTS_DIR/client/seed-cert.key" /opt/certs/
-            cp "$SHARED_CERTS_DIR/client/seed-cert.p12" /opt/certs/
+            if [ -f "$SHARED_CERTS_DIR/client/seed-cert.p12" ]; then
+                cp "$SHARED_CERTS_DIR/client/seed-cert.p12" /opt/certs/
+            else
+                echo "[certs] ⚠ xPKI seed PKCS#12 bundle not available; continuing with PEM/key only"
+            fi
             chmod 600 /opt/certs/seed-cert.key
             echo "[certs] ✓ xPKI seed certificate available for PKCS#11 provisioning"
         else
