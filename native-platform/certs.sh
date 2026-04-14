@@ -201,37 +201,6 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
     
-    # Wait for xPKI seed certificate from mock-xconf (if PKCS#11 enabled)
-    if [ "$ENABLE_PKCS11" = "true" ]; then
-        echo "[certs] Waiting for xPKI seed certificate from mock-xconf..."
-        WAIT_COUNT=0
-        MAX_WAIT=30
-        # Wait for both PEM and key to be present
-        while [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] || [ ! -f "$SHARED_CERTS_DIR/client/seed-cert.key" ]; do
-            if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
-                break
-            fi
-            sleep 1
-            WAIT_COUNT=$((WAIT_COUNT + 1))
-        done
-        
-        if [ -f "$SHARED_CERTS_DIR/client/seed-cert.pem" ] && [ -f "$SHARED_CERTS_DIR/client/seed-cert.key" ]; then
-            # Copy seed cert to /opt/certs for PKCS#11 provisioning
-            cp "$SHARED_CERTS_DIR/client/seed-cert.pem" /opt/certs/
-            cp "$SHARED_CERTS_DIR/client/seed-cert.key" /opt/certs/
-            if [ -f "$SHARED_CERTS_DIR/client/seed-cert.p12" ]; then
-                cp "$SHARED_CERTS_DIR/client/seed-cert.p12" /opt/certs/
-            else
-                echo "[certs] ⚠ xPKI seed PKCS#12 bundle not available; continuing with PEM/key only"
-            fi
-            chmod 600 /opt/certs/seed-cert.key
-            echo "[certs] ✓ xPKI seed certificate available for PKCS#11 provisioning"
-        else
-            echo "[certs] ⚠ xPKI seed certificate not available (timeout after ${MAX_WAIT}s)"
-            echo "[certs] PKCS#11 xPKI tests may be skipped"
-        fi
-    fi
-
     # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
     if [ "$ENABLE_PKCS11" = "true" ]; then
         echo "[certs] Setting up PKCS#11 token and importing certificates..."
