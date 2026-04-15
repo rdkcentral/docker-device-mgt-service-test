@@ -200,7 +200,7 @@ if [ "$ENABLE_MTLS" = "true" ]; then
 
     echo "[certs] Client certificates generated and copied to /opt/certs"
     echo "[certs] Client CA chain copied to shared volume for mock-xconf"
-    
+
     # Setup PKCS#11 token and import certificates (if PKCS#11 enabled)
     if [ "$ENABLE_PKCS11" = "true" ]; then
         echo "[certs] Setting up PKCS#11 token and importing certificates..."
