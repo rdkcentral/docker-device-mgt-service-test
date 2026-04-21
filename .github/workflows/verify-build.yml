@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'rdkcentral/rdk_logger'
-          ref: 'v3.0.0'
+          ref: 'v3.1.0'
           path: 'device-management-service/native-platform/rdk_logger'
 
       - name: Check out the dependent rdkcentral/webconfigframework repository
