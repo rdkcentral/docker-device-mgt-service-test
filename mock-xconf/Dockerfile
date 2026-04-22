@@ -93,6 +93,10 @@ RUN chmod +x /usr/local/bin/stbLogUpload.js
 COPY crashUpload.js /usr/local/bin/crashUpload.js
 RUN chmod +x /usr/local/bin/crashUpload.js
 
+# RDK-61060: XPKI Certifier service
+COPY xpki-certifier.js /usr/local/bin/xpki-certifier.js
+RUN chmod +x /usr/local/bin/xpki-certifier.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
@@ -100,6 +104,7 @@ EXPOSE 50051
 EXPOSE 50052
 EXPOSE 50053
 EXPOSE 50054
+EXPOSE 50055
 EXPOSE 50056
 EXPOSE 50057
 EXPOSE 50058

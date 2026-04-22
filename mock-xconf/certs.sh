@@ -1,4 +1,5 @@
 #!/bin/sh
+echo "[certs.sh] Starting certificate generation..."
 set -e
 
 ##########################################################################
@@ -60,6 +61,7 @@ mkdir -p "$SHARED_CERTS_DIR/server"
 
 # Copy the server certificates to the xconf certs directory
 cp "$SERVER_KEY" /etc/xconf/certs/mock-xconf-server-key.pem
+chmod 600 /etc/xconf/certs/mock-xconf-server-key.pem
 cp "$SERVER_CERT" /etc/xconf/certs/mock-xconf-server-cert.pem
 echo "[certs] Server certificates generated and copied to /etc/xconf/certs"
 
@@ -67,6 +69,41 @@ echo "[certs] Server certificates generated and copied to /etc/xconf/certs"
 cp "$ROOT_CA_CERT" "$SHARED_CERTS_DIR/server/root_ca.pem"
 cp "$ICA_CERT" "$SHARED_CERTS_DIR/server/intermediate_ca.pem"
 echo "[certs] Server root and intermediate CA certificates copied to shared volume for native-platform"
+
+# ─── RDK-61060: Generate Seed Certificate using Server ICA ───────────────────
+# NOTE: This MUST run BEFORE the mTLS wait so that xpki-certifier.js can start
+# Use Test-RDK-server-ICA to sign seed cert (simpler than dual PKI hierarchy)
+# Per architecture: mock-xconf generates seed, exports to shared volume
+
+echo "[certs] Generating seed certificate using Test-RDK-server-ICA..."
+
+# Setup seed cert directory (xpki-certifier.js uses original cert paths directly)
+SEED_CERT_DIR="$SHARED_CERTS_DIR/client"
+mkdir -p "$SEED_CERT_DIR"
+
+# Generate seed cert using rdk-cert-config (unified PKI - no separate xpki-root)
+# Validity set to 1 day for testing (short-lived seed cert)
+/etc/pki/scripts/create_leaf_cert.sh \
+    --cert-name "test-seed-device-001" \
+    --ca-name "$ICA_NAME" \
+    --cn "test-seed-device-001" \
+    --validity 1 \
+    --type client
+
+# Export seed cert to shared volume for native-platform
+SEED_KEY="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/private/test-seed-device-001.key"
+SEED_CERT="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/test-seed-device-001.pem"
+SEED_P12="/etc/pki/${ROOT_CA_NAME}/${ICA_NAME}/certs/test-seed-device-001.p12"
+
+cp "$SEED_KEY" "$SEED_CERT_DIR/seed-cert.key"
+cp "$SEED_CERT" "$SEED_CERT_DIR/seed-cert.pem"
+cp "$SEED_P12" "$SEED_CERT_DIR/seed-cert.p12"
+
+chmod 644 "$SEED_CERT_DIR/seed-cert.pem" "$SEED_CERT_DIR/seed-cert.p12"
+chmod 600 "$SEED_CERT_DIR/seed-cert.key"
+
+echo "[certs] ✓ Seed certificate (1 day validity) generated and exported to shared volume"
+echo "[certs] ✓ xPKI Certifier will use Test-RDK-server-ICA from /etc/pki directly"
 
 # If mTLS is enabled at startup, wait for client certificates
 if [ "$ENABLE_MTLS" = "true" ]; then
@@ -83,6 +120,13 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     # Import client CA chain to trust store and clean it up from shared volume
     cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
     rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    # Operational certs are signed by Test-RDK-server-ICA which has a DIFFERENT root
+    # than the client certificates, so we need the complete server chain
+    if [ -f "$ICA_CERT" ] && [ -f "$ROOT_CA_CERT" ]; then
+        cat "$ICA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
+        cat "$ROOT_CA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
+        echo "[certs] Server CA chain (ICA + root) appended to trust store for operational certificates"
+    fi
     echo "[certs] Client CA chain imported to trust store"
     echo "[certs] mTLS certificate trust flow established"
 fi
