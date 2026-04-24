@@ -1,0 +1,545 @@
+/*
+ * If not stated otherwise in this file or this component's LICENSE file the
+ * following copyright and licenses apply:
+ *
+ * Copyright 2025 RDK Management
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+/**
+ * Mock XPKI Certifier Service (RDK-61060)
+ *
+ * Listens on port 50055 and provides /v1/certifier/certificate and /api/v1/device-cert
+ * endpoints for simulating the XPKI certificate procurement flow.
+ *
+ * Supports:
+ *  - CSR parsing and certificate signing with Test-RDK-xpki-ICA
+ *  - Health check endpoint
+ *  - Admin endpoints for test control (error injection, request inspection)
+ *
+ * Security Note:
+ *  - mTLS is intentionally NOT enabled for this service
+ *  - Clients need to obtain certificates BEFORE they can present them for mTLS
+ *  - Admin endpoints are unauthenticated (test-only service, not for production)
+ *
+ * Certificate hierarchy used:
+ *   Test-RDK-xpki-root -> Test-RDK-xpki-ICA -> signed device cert
+ *
+ * All certificate paths follow the same pattern as other mockxconf services.
+ */
+
+'use strict';
+
+const https = require('node:https');
+const fs   = require('node:fs');
+const crypto = require('node:crypto');
+const os = require('node:os');
+const { execFileSync } = require('node:child_process');
+const TMPDIR = os.tmpdir();
+
+// ─── Configuration ────────────────────────────────────────────────────────────
+
+const PORT = 50055;
+
+// Certificate paths (use original rdk-cert-config paths directly - no copying)
+const XPKI_ICA_KEY  = '/etc/pki/Test-RDK-root/Test-RDK-server-ICA/private/Test-RDK-server-ICA.key';
+const XPKI_ICA_CERT = '/etc/pki/Test-RDK-root/Test-RDK-server-ICA/certs/Test-RDK-server-ICA.pem';
+const XPKI_ROOT_CERT = '/etc/pki/Test-RDK-root/certs/Test-RDK-root.pem';
+
+// Server TLS key/cert (reuse the mockxconf server certificate)
+const SERVER_KEY  = '/etc/xconf/certs/mock-xconf-server-key.pem';
+const SERVER_CERT = '/etc/xconf/certs/mock-xconf-server-cert.pem';
+
+// ─── Startup diagnostics ──────────────────────────────────────────────────────
+
+console.log('[xpki-certifier] ====================================');
+console.log('[xpki-certifier] Mock XPKI Certifier Service starting');
+console.log('[xpki-certifier] ====================================');
+console.log(`[xpki-certifier] Node version: ${process.version}`);
+console.log(`[xpki-certifier] PID: ${process.pid}`);
+console.log(`[xpki-certifier] Target port: ${PORT}`);
+console.log('[xpki-certifier] Checking required certificate files...');
+
+// Check server TLS files first (should exist from certs.sh)
+const tlsFiles = [SERVER_KEY, SERVER_CERT];
+for (const f of tlsFiles) {
+  const exists = fs.existsSync(f);
+  console.log(`[xpki-certifier]   ${exists ? '✓' : '✗'} ${f}`);
+  if (!exists) {
+    console.error(`[xpki-certifier] FATAL: Missing required TLS file: ${f}`);
+    process.exit(1);
+  }
+}
+
+// ─── Runtime state (reset via admin endpoint) ─────────────────────────────────
+
+// Request logging settings (cap the log to avoid unbounded growth)
+const ENABLE_REQUEST_LOG = (process.env.XPKI_ENABLE_REQUEST_LOG || 'true') === 'true';
+const MAX_REQUEST_LOG_ENTRIES = parseInt(process.env.XPKI_MAX_LOG_ENTRIES || '1000', 10) || 1000;
+const ENABLE_CSR_DEBUG_LOGGING = (process.env.XPKI_DEBUG_CSR || 'false') === 'true';
+
+// Certificate cache settings (prevent unbounded memory growth)
+const MAX_CERT_CACHE_SIZE = parseInt(process.env.XPKI_MAX_CACHE_SIZE || '10000', 10) || 10000;
+
+let requestLog = [];
+let forceErrorMode = null;   // null | 'csr_invalid' | 'server_error' | 'rate_limit'
+let requestCount = 0;
+let certCache = {};  // Cache issued certs by certificateId for renewal:  certCache[certId] = { csr, certPem, chain }
+let certCacheKeys = [];  // Track insertion order for LRU eviction
+
+// ─── HTTPS server options ─────────────────────────────────────────────────────
+
+console.log('[xpki-certifier] Loading TLS certificates for HTTPS server...');
+const options = {
+  key:  fs.readFileSync(SERVER_KEY),
+  cert: fs.readFileSync(SERVER_CERT)
+  // Note: port is set via server.listen(PORT), not in options
+};
+console.log('[xpki-certifier] TLS certificates loaded successfully');
+
+// mTLS is intentionally NOT applied to xpki-certifier.
+// This mock service signs CSRs at certificate procurement time, before any
+// client (test or rdkxpkicertifier) holds a seed certificate to present.
+// Enforcing client-cert auth here would cause TLS handshake failures for all
+// callers. Other services that require mTLS still use applyMtlsConfig().
+
+// ─── Certificate signing helpers ─────────────────────────────────────────────
+
+/**
+ * Sign a PEM-encoded CSR with the Test-RDK-xpki-ICA using the openssl CLI.
+ * Returns the signed certificate PEM and the ICA/root chain as an array.
+ *
+ * We delegate to openssl rather than a JS crypto library to avoid extra npm
+ * dependencies and to stay consistent with the existing cert-generation
+ * approach used throughout mockxconf.
+ */
+function signCsrWithOpenssl(csrPem, validityDays) {
+  const tmpDir  = fs.mkdtempSync(`${TMPDIR}/xpki-certifier-`);
+  const serialHex = crypto.randomBytes(8).toString('hex');
+  const serialForOpenSSL = `0x${serialHex}`;
+  const csrPath  = `${tmpDir}/${serialHex}.csr`;
+  const certPath = `${tmpDir}/${serialHex}.pem`;
+  const extPath  = `${tmpDir}/${serialHex}.ext`;
+
+  // Format CSR: convert base64 to PEM if headers missing
+  let formattedCsr = csrPem.trim();
+  if (!formattedCsr.includes('-----BEGIN CERTIFICATE REQUEST-----')) {
+    // Attempt base64-to-PEM conversion
+    const base64Clean = formattedCsr.replace(/\s+/g, '');
+    if (!base64Clean || base64Clean.length === 0) {
+      throw new Error('CSR is empty');
+    }
+    // Add PEM headers and format with 64-char lines
+    const base64Formatted = base64Clean.match(/.{1,64}/g).join('\n');
+    formattedCsr = `-----BEGIN CERTIFICATE REQUEST-----\n${base64Formatted}\n-----END CERTIFICATE REQUEST-----\n`;
+    console.log('[xpki-certifier] Converted base64 CSR to PEM format');
+    // CSR preview can leak subject/SAN info - only log when explicitly enabled
+    if (ENABLE_CSR_DEBUG_LOGGING) {
+      console.log(`[xpki-certifier] CSR preview (first 100 chars): ${formattedCsr.substring(0, 100)}...`);
+    }
+  }
+
+  fs.writeFileSync(csrPath, formattedCsr, { mode: 0o600 });
+
+  // Validate CSR signature BEFORE attempting to sign
+  console.log('[xpki-certifier] Validating CSR signature...');
+  try {
+    const verifyResult = execFileSync('openssl', ['req', '-in', csrPath, '-noout', '-verify'], {
+      stdio: 'pipe',
+      encoding: 'utf8'
+    });
+    console.log(`[xpki-certifier] CSR validation result: ${verifyResult.trim()}`);
+  } catch (verifyErr) {
+    const errorMsg = verifyErr.stderr || verifyErr.message || 'Unknown verification error';
+    console.error('[xpki-certifier] CSR signature verification FAILED');
+    console.error(`[xpki-certifier] OpenSSL error: ${errorMsg}`);
+    throw new Error(`Invalid CSR signature: ${errorMsg}. This indicates the CSR was not properly signed, likely due to PKCS11 key access issues.`);
+  }
+
+  // Validate and clamp validityDays (user-controlled input)
+  let days = parseInt(validityDays, 10);
+  if (Number.isNaN(days) || days <= 0) days = 90;
+  // Cap to reasonable maximum (10 years)
+  days = Math.min(Math.max(days, 1), 3650);
+
+  // Write extfile instead of using shell process substitution
+  const extContent = 'keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=clientAuth,serverAuth\n';
+  fs.writeFileSync(extPath, extContent, { mode: 0o600 });
+
+  try {
+    // Sign the validated CSR
+    const args = [
+      'x509', '-req',
+      '-in', csrPath,
+      '-CA', XPKI_ICA_CERT,
+      '-CAkey', XPKI_ICA_KEY,
+      '-set_serial', serialForOpenSSL,
+      '-out', certPath,
+      '-days', String(days),
+      '-sha256',
+      '-extfile', extPath
+    ];
+
+    execFileSync('openssl', args, { stdio: 'pipe' });
+
+    const certPem  = fs.readFileSync(certPath, 'utf8');
+    const icaPem   = fs.readFileSync(XPKI_ICA_CERT, 'utf8');
+    const rootPem  = fs.readFileSync(XPKI_ROOT_CERT, 'utf8');
+
+    return { certPem, chain: [icaPem, rootPem] };
+  } finally {
+    // Clean up temp files and directory
+    try { fs.unlinkSync(csrPath); } catch (_) {}
+    try { fs.unlinkSync(certPath); } catch (_) {}
+    try { fs.unlinkSync(extPath); } catch (_) {}
+    try { fs.rmdirSync(tmpDir); } catch (_) {}
+  }
+}
+
+// ─── Request handling ─────────────────────────────────────────────────────────
+
+function sendJson(res, statusCode, body) {
+  const payload = JSON.stringify(body);
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(payload)
+  });
+  res.end(payload);
+}
+
+function handleCertRequest(req, res, body) {
+  let params;
+  try {
+    params = JSON.parse(body);
+  } catch (e) {
+    console.error('[xpki-certifier] JSON parse error:', e.message);
+    return sendJson(res, 400, { error: 'Invalid JSON body', status: 'error' });
+  }
+
+  // Admin-controlled error injection
+  if (forceErrorMode === 'csr_invalid') {
+    return sendJson(res, 400, { error: 'CSR validation failed (injected)', status: 'error' });
+  }
+  if (forceErrorMode === 'rate_limit') {
+    return sendJson(res, 429, { error: 'Rate limit exceeded (injected)', status: 'error' });
+  }
+  if (forceErrorMode === 'server_error') {
+    return sendJson(res, 500, { error: 'Internal server error (injected)', status: 'error' });
+  }
+
+  // Handle RENEWAL requests (certificateId present, no CSR)
+  // libcertifier sends certificateId (SHA-1 hash of certificate DER) when renewing an existing cert
+  // NOTE: certificateId must be SHA-1 to match libcertifier - see hash calculation below for details
+  if (params.certificateId && !params.csr) {
+    console.log('[xpki-certifier] Certificate RENEWAL request received:', {
+      certificateId: params.certificateId
+    });
+    
+    // Look up the cached CSR for this certificateId
+    const cachedCert = certCache[params.certificateId];
+    
+    if (!cachedCert || !cachedCert.csr) {
+      console.error('[xpki-certifier] No cached CSR found for certificateId:', params.certificateId);
+      return sendJson(res, 404, {
+        error: 'Certificate not found for renewal',
+        status: 'error',
+        hint: 'CertificateId not in cache. Create the certificate first before renewing.'
+      });
+    }
+    
+    console.log('[xpki-certifier] Found cached CSR - re-signing with same public key');
+    
+    // Re-sign the same CSR to generate a renewal certificate with the same public key
+    let result;
+    try {
+      result = signCsrWithOpenssl(cachedCert.csr, params.validity_days || 1);
+    } catch (err) {
+      console.error('[xpki-certifier] Renewal cert generation failed:', err.message);
+      return sendJson(res, 500, {
+        error: 'Failed to generate renewal certificate',
+        status: 'error'
+      });
+    }
+    
+    const fullChain = [result.certPem, ...result.chain].join('\n');
+    
+    // Update the cache with the new renewed certificate
+    certCache[params.certificateId] = {
+      csr: cachedCert.csr,  // Keep the same CSR
+      certPem: result.certPem,
+      chain: result.chain
+    };
+    
+    const response = {
+      certificate:       result.certPem,
+      certificateChain:  fullChain,
+      status:            'success'
+    };
+    
+    console.log('[xpki-certifier] Renewal certificate issued successfully (same public key as original)');
+    requestCount++;
+    return sendJson(res, 200, response);
+  }
+
+  const csrPem = params.csr;
+  if (!csrPem) {
+    return sendJson(res, 400, { error: 'Missing required parameter: csr', status: 'error' });
+  }
+
+  console.log('[xpki-certifier] Certificate request received:', {
+    profile:   params.profile_name || params.profile || '(none)',
+    cn:        params.common_name  || '(none)',
+    serial:    params.serial_number || '(none)',
+    validity:  params.validity_days || 1
+  });
+
+  let result;
+  try {
+    result = signCsrWithOpenssl(csrPem, params.validity_days);
+  } catch (err) {
+    console.error('[xpki-certifier] CSR signing failed:', err.message);
+    
+    // Provide helpful error message for CSR validation failures
+    const errorResponse = {
+      error: err.message,
+      status: 'error',
+      hint: 'Check that the CSR was properly signed with the correct private key'
+    };
+    
+    if (err.message.includes('Invalid CSR signature')) {
+      errorResponse.hint = 'CSR signature verification failed. This usually indicates: ' +
+        '1) PKCS11 key is not accessible, ' +
+        '2) Wrong key was used to sign the CSR, ' +
+        '3) CSR was corrupted during transmission. ' +
+        'Check PKCS11 configuration and key availability.';
+    }
+    
+    return sendJson(res, 400, errorResponse);
+  }
+
+  // Production xPKI returns leaf cert + chain together in certificateChain field
+  // (in PKCS7 format), but for simplicity we return PEM with leaf cert first
+  const fullChain = [result.certPem, ...result.chain].join('\n');
+  
+  // Calculate certificateId (SHA-1 hash of DER-encoded cert) for renewal cache
+  // 
+  // IMPORTANT: Must use SHA-1 (not SHA-256) to maintain compatibility with libcertifier
+  // 
+  // Rationale:
+  //   - libcertifier calculates certificateId using security_sha1() (see certifier.c line 344)
+  //   - Renewal requests send this SHA-1 hash to lookup the cached CSR
+  //   - If we use SHA-256 here, the hashes won't match and renewal will fail with 404
+  //   - This was discovered when Copilot security review changed SHA-1 to SHA-256
+  //   - Tests passed initially but renewal broke because:
+  //       CREATE test: xpki-certifier caches cert with SHA-256 hash (64 hex chars)
+  //       RENEW test:  libcertifier sends SHA-1 hash (40 hex chars)
+  //       Result:      404 "Certificate not found for renewal"
+  // 
+  // Security Note:
+  //   - SHA-1 is deprecated for digital signatures but acceptable for non-cryptographic
+  //     identifiers where collision resistance requirements are lower
+  //   - The certificateId is used only as a cache lookup key, not for security validation
+  //   - The actual certificate validation uses proper signature verification
+  // 
+  // To upgrade to SHA-256:
+  //   - libcertifier must be updated to use SHA-256 (change security_sha1 to security_sha256)
+  //   - Both client and server must change simultaneously to avoid breakage
+  //   - Coordinate with libcertifier maintainers before changing this
+  //
+  // Convert PEM to DER by removing headers and base64 decoding
+  const certDer = Buffer.from(
+    result.certPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                   .replace(/-----END CERTIFICATE-----/, '')
+                   .replace(/\s/g, ''),
+    'base64'
+  );
+  const certificateId = crypto.createHash('sha1').update(certDer).digest('hex');
+  
+  // Cache the CSR for potential renewal requests (with LRU eviction)
+  if (!certCache[certificateId]) {
+    certCacheKeys.push(certificateId);
+    // Evict oldest entry if cache is full (LRU policy)
+    if (certCacheKeys.length > MAX_CERT_CACHE_SIZE) {
+      const oldestKey = certCacheKeys.shift();
+      delete certCache[oldestKey];
+      console.log(`[xpki-certifier] Evicted oldest cached cert: ${oldestKey} (cache limit: ${MAX_CERT_CACHE_SIZE})`);
+    }
+  }
+  certCache[certificateId] = {
+    csr: csrPem,
+    certPem: result.certPem,
+    chain: result.chain
+  };
+  console.log(`[xpki-certifier] Cached cert for renewal with ID: ${certificateId}`);
+  
+  const response = {
+    certificate:       result.certPem,           // Leaf cert (for backward compatibility)
+    certificateChain:  fullChain,                 // Leaf + ICA + root (production format)
+    status:            'success'
+  };
+
+  console.log('[xpki-certifier] Certificate issued successfully (leaf + chain)');
+  requestCount++;
+  return sendJson(res, 200, response);
+}
+
+function handleAdmin(req, res) {
+  const urlObj = new URL(req.url, `https://mockxconf:${PORT}`);
+  const action = urlObj.searchParams.get('action');
+
+  if (action === 'reset') {
+    requestLog   = [];
+    forceErrorMode = null;
+    requestCount   = 0;
+    certCache    = {};  // Clear certificate cache
+    certCacheKeys = [];  // Clear cache key tracking
+    return sendJson(res, 200, { message: 'State reset', status: 'ok' });
+  }
+  if (action === 'setError') {
+    forceErrorMode = urlObj.searchParams.get('mode') || null;
+    return sendJson(res, 200, { message: `Error mode set to: ${forceErrorMode}`, status: 'ok' });
+  }
+  if (action === 'getLog') {
+    return sendJson(res, 200, { requests: requestLog, count: requestCount });
+  }
+
+  return sendJson(res, 400, { error: 'Unknown admin action', status: 'error' });
+}
+
+function handleRequest(req, res) {
+  console.log(`[xpki-certifier] ${req.method} ${req.url}`);
+
+  // Log request for test inspection (with capping to prevent unbounded growth)
+  if (ENABLE_REQUEST_LOG) {
+    requestLog.push({
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.url
+    });
+    // Enforce max log entries (ring buffer - drop oldest)
+    if (requestLog.length > MAX_REQUEST_LOG_ENTRIES) {
+      requestLog = requestLog.slice(-MAX_REQUEST_LOG_ENTRIES);
+    }
+  }
+
+  // CORS pre-flight
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    return res.end();
+  }
+
+  // Health check
+  if (req.method === 'GET' && req.url === '/health') {
+    return sendJson(res, 200, { status: 'ok', service: 'xpki-certifier', port: PORT });
+  }
+
+  // Admin control endpoint (for test orchestration)
+  // WARNING: Unauthenticated endpoint - acceptable for test/mock service only
+  // Production deployments should implement authentication/authorization
+  if (req.method === 'GET' && req.url.startsWith('/admin/xpkiCertifier')) {
+    return handleAdmin(req, res);
+  }
+
+  // Certificate issuance – both legacy and seed-scope paths
+  const isCertEndpoint =
+    (req.method === 'POST' && req.url === '/v1/certifier/certificate') ||
+    (req.method === 'POST' && req.url === '/api/v1/device-cert') ||
+    (req.method === 'POST' && req.url === '/v1/certifier/renew');  // libcertifier renewal endpoint
+
+  if (isCertEndpoint) {
+    let body = '';
+    const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB limit
+    req.on('data', chunk => {
+      body += chunk.toString();
+      // Abort on oversized body to prevent memory exhaustion
+      if (body.length > MAX_BODY_SIZE) {
+        req.destroy();
+        return sendJson(res, 413, { error: 'Request body too large', status: 'error' });
+      }
+    });
+    req.on('end', () => handleCertRequest(req, res, body));
+    return;
+  }
+
+  return sendJson(res, 404, { error: 'Not Found' });
+}
+
+// ─── Server startup ───────────────────────────────────────────────────────────
+
+// Wait until ICA certs are available (certs.sh runs before this process starts)
+function waitForCerts(retries, cb) {
+  const required = [
+    { path: XPKI_ICA_KEY, desc: 'XPKI ICA Key' },
+    { path: XPKI_ICA_CERT, desc: 'XPKI ICA Cert' },
+    { path: XPKI_ROOT_CERT, desc: 'XPKI Root Cert' }
+  ];
+
+  const missing = required.filter(f => !fs.existsSync(f.path));
+
+  if (missing.length === 0) {
+    console.log('[xpki-certifier] All XPKI ICA certificates found:');
+    required.forEach(f => console.log(`[xpki-certifier]   ✓ ${f.desc}: ${f.path}`));
+    return cb(null);
+  }
+
+  if (retries <= 0) {
+    console.error('[xpki-certifier] FATAL: XPKI ICA certificates not found after waiting.');
+    console.error('[xpki-certifier] Missing files:');
+    missing.forEach(f => console.error(`[xpki-certifier]   ✗ ${f.desc}: ${f.path}`));
+    return cb(new Error(`XPKI ICA certificates not found. Expected: ${required.map(f => f.path).join(', ')}`));
+  }
+
+  console.log(`[xpki-certifier] Waiting for XPKI ICA certificates... (${retries} retries left, ${missing.length} files missing)`);
+  setTimeout(() => waitForCerts(retries - 1, cb), 2000);
+}
+
+console.log('[xpki-certifier] Waiting for XPKI ICA certificates from certs.sh...');
+waitForCerts(15, (err) => {
+  if (err) {
+    console.error('[xpki-certifier] FATAL:', err.message);
+    process.exit(1);
+  }
+
+  console.log('[xpki-certifier] Creating HTTPS server...');
+  const server = https.createServer(options, handleRequest);
+
+  server.listen(PORT, () => {
+    console.log('[xpki-certifier] ====================================');
+    console.log(`[xpki-certifier] ✓ Server READY on port ${PORT}`);
+    console.log('[xpki-certifier] ====================================');
+    console.log(`[xpki-certifier] Endpoint: https://mockxconf:${PORT}/v1/certifier/certificate`);
+    console.log(`[xpki-certifier] Seed-scope endpoint: https://mockxconf:${PORT}/api/v1/device-cert`);
+    console.log(`[xpki-certifier] Health check: https://mockxconf:${PORT}/health`);
+    console.log(`[xpki-certifier] mTLS: ${process.env.ENABLE_MTLS === 'true' ? 'enabled' : 'disabled'}`);
+  });
+
+  server.on('error', (err) => {
+    console.error('[xpki-certifier] Server error:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[xpki-certifier] Port ${PORT} is already in use!`);
+    }
+    process.exit(1);
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('[xpki-certifier] Received SIGTERM, shutting down gracefully');
+    server.close(() => {
+      console.log('[xpki-certifier] Server closed');
+      process.exit(0);
+    });
+  });
+});
