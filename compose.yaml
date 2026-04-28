@@ -8,6 +8,8 @@ services:
       - "50051:50051"
       - "50052:50052"
       - "50053:50053"
+      - "50054:50054"
+      - "50055:50055"  # RDK-61060: XPKI Certifier
       - "50056:50056"
       - "50057:50057"
       - "50058:50058"
@@ -16,7 +18,7 @@ services:
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
-      - ENABLE_MTLS=true    
+      - ENABLE_MTLS=true
 
 
   l2-container:
