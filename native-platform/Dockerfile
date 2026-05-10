@@ -61,6 +61,28 @@ RUN apt-get update && apt-get install -y \
 
 RUN git config --global http.sslverify false
 
+# Build and install Thunder (WPEFramework) - required for WPEFrameworkCore / WPEFrameworkWebSocket
+# pkg-config modules consumed by systimerfactory (networkstatussrc).
+RUN apt-get update && apt-get install -y libnl-3-dev libnl-route-3-dev
+# jsonref is needed by Thunder's JsonGenerator (cmake code-gen step)
+RUN pip3 install jsonref
+# ThunderTools must be built before Thunder (provides ProxyStubGenerator cmake infrastructure)
+RUN cd /opt && git clone https://github.com/rdkcentral/ThunderTools.git --depth 1 -b R4.4.1 \
+    && mkdir -p ThunderTools/build && cd ThunderTools/build \
+    && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. \
+    && make install \
+    && cd /opt && rm -rf ThunderTools
+RUN cd /opt && git clone https://github.com/rdkcentral/Thunder.git --depth 1 -b R4.4.1 \
+    && mkdir -p Thunder/build && cd Thunder/build \
+    && cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
+             -DEXCEPTIONS_ENABLE=ON \
+             -DBUILD_SHARED_LIBS=ON \
+             -DBINDING=127.0.0.1 \
+             .. \
+    && make -j$(nproc) && make install \
+    && ldconfig \
+    && cd /opt && rm -rf Thunder
+
 RUN mkdir -p /opt && cd /opt && git clone -b v0.7.0 https://git.yoctoproject.org/opkg --single-branch \
     && cd opkg && autoreconf --install && ./configure && make && make install && \
     cd .. && rm -rf opkg
