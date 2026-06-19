@@ -97,6 +97,12 @@ RUN chmod +x /usr/local/bin/crashUpload.js
 COPY xpki-certifier.js /usr/local/bin/xpki-certifier.js
 RUN chmod +x /usr/local/bin/xpki-certifier.js
 
+# RDK-61158: CRL mTLS server and CRL control server
+COPY crl-mtls-server.js /usr/local/bin/crl-mtls-server.js
+RUN chmod +x /usr/local/bin/crl-mtls-server.js
+COPY crl-control.js /usr/local/bin/crl-control.js
+RUN chmod +x /usr/local/bin/crl-control.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
@@ -110,4 +116,6 @@ EXPOSE 50057
 EXPOSE 50058
 EXPOSE 50059
 EXPOSE 50060
+EXPOSE 50061
+EXPOSE 50062
 

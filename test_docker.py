@@ -10,7 +10,8 @@ CONTAINERS = ["mockxconf", "native-platform"]
 
 # Define expected open ports for mockxconf only (since you want IPv6 check for mockxconf)
 # RDK-61060: Added port 50055 for xpki-certifier service
-MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059, 50060]  # Example IPv6 ports for mockxconf
+# RDK-61158: Added ports 50061 (CRL mTLS) and 50062 (CRL control)
+MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059, 50060, 50061, 50062]  # Example IPv6 ports for mockxconf
 
 # Define expected files in each container
 EXPECTED_FILES = {
@@ -61,8 +62,8 @@ def test_node_processes_running_mockxconf(container):
     node_process_count = int(output.strip())  # Convert output to integer
     print(f"Found {node_process_count} Node.js processes running in {container.name}")
 
-    assert node_process_count == 9, f"Expected 9 Node.js processes, but found {node_process_count}!"
-    print(f"✅ All 9 Node.js processes are running in {container.name}")
+    assert node_process_count == 10, f"Expected 10 Node.js processes, but found {node_process_count}!"
+    print(f"\u2705 All 10 Node.js processes are running in {container.name}")
 
 def test_files_exist(container):
     """Verify that expected files exist in the respective container."""

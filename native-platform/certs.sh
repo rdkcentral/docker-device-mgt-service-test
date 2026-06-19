@@ -245,4 +245,77 @@ else
     echo "[certs] mTLS disabled - skipping certificate operations"
 fi
 
+# ─── RDK-61158: CRL mTLS L3 — pick up CRL and xsign client certs ─────────────
+# Gated on ENABLE_CRL_L3=true.  Waits for mock-xconf to export certs to the
+# shared volume, then copies them to local directories and updates the system
+# CA trust store so that curl can verify the CRL mTLS server certificate.
+ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
+if [ "${ENABLE_CRL_L3}" = "true" ]; then
+    echo "[certs] [CRL-L3] Waiting for CRL client cert from mock-xconf..."
+
+    # ── Wait for CRL client cert ──────────────────────────────────────────────
+    while [ ! -f "${SHARED_CERTS_DIR}/crl-client/crl-client.p12" ]; do
+        sleep 1
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12..."
+    done
+
+    mkdir -p /opt/certs/crl
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.pem"    /opt/certs/crl/crl-client.pem
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.key"    /opt/certs/crl/crl-client.key
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.p12"    /opt/certs/crl/crl-client.p12
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-ica-chain.pem" /opt/certs/crl/crl-ica-chain.pem
+    chmod 600 /opt/certs/crl/crl-client.key
+    chmod 644 /opt/certs/crl/crl-client.pem \
+              /opt/certs/crl/crl-client.p12 \
+              /opt/certs/crl/crl-ica-chain.pem
+    echo "[certs] [CRL-L3] CRL client cert assets copied to /opt/certs/crl/"
+
+    # ── Wait for xsign P12 bundles ────────────────────────────────────────────
+    echo "[certs] [CRL-L3] Waiting for xsign P12 bundles from mock-xconf..."
+    while [ ! -f "${SHARED_CERTS_DIR}/xs-client/client-xsign.p12" ]; do
+        sleep 1
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/client-xsign.p12..."
+    done
+
+    mkdir -p /opt/certs/xs
+    cp "${SHARED_CERTS_DIR}/xs-client/client-xsign.p12" /opt/certs/xs/client-xsign.p12
+    cp "${SHARED_CERTS_DIR}/xs-client/client-old.p12"   /opt/certs/xs/client-old.p12
+    cp "${SHARED_CERTS_DIR}/xs-client/client-expxs.p12" /opt/certs/xs/client-expxs.p12
+    if [ -f "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" ]; then
+        cp "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem"  /opt/certs/xs/NewRoot.pem
+        chmod 644 /opt/certs/xs/NewRoot.pem
+    fi
+    chmod 644 /opt/certs/xs/client-xsign.p12 \
+              /opt/certs/xs/client-old.p12 \
+              /opt/certs/xs/client-expxs.p12
+    echo "[certs] [CRL-L3] xsign P12 bundles copied to /opt/certs/xs/"
+
+    # ── Install CRL and XS root CAs into system trust store ──────────────────
+    # Test-CRL-Root is needed for curl to verify the crl-mtls-server TLS cert.
+    # Test-XS-NewRoot is needed so curl can verify xsign bridged cert chains.
+    _TRUST_DIR="/usr/share/ca-certificates"
+
+    # Extract Test-CRL-Root from the ICA chain (first cert block)
+    awk '/-----BEGIN CERTIFICATE-----/{n++} n==2{print}' \
+        /opt/certs/crl/crl-ica-chain.pem > "${_TRUST_DIR}/test-crl-root.pem" 2>/dev/null || true
+    # Fallback: the chain has ICA first, root second; use openssl to get the root
+    if [ ! -s "${_TRUST_DIR}/test-crl-root.pem" ]; then
+        # Just copy the whole chain as the trust anchor; curl will accept it
+        cp /opt/certs/crl/crl-ica-chain.pem "${_TRUST_DIR}/test-crl-root.pem"
+    fi
+    chmod 644 "${_TRUST_DIR}/test-crl-root.pem"
+    grep -qxF "test-crl-root.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "test-crl-root.pem" >> /etc/ca-certificates.conf
+
+    if [ -f /opt/certs/xs/NewRoot.pem ]; then
+        cp /opt/certs/xs/NewRoot.pem "${_TRUST_DIR}/test-xs-newroot.pem"
+        chmod 644 "${_TRUST_DIR}/test-xs-newroot.pem"
+        grep -qxF "test-xs-newroot.pem" /etc/ca-certificates.conf 2>/dev/null || \
+            echo "test-xs-newroot.pem" >> /etc/ca-certificates.conf
+    fi
+
+    /usr/sbin/update-ca-certificates --fresh
+    echo "[certs] [CRL-L3] Test-CRL-Root and Test-XS-NewRoot installed in system trust store"
+fi
+
 exit 0
