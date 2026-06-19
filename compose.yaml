@@ -15,10 +15,13 @@ services:
       - "50058:50058"
       - "50059:50059"  # Crash metadata endpoint
       - "50060:50060"  # S3 presigned URL endpoint
+      - "50061:50061"  # RDK-61158: CRL mTLS server
+      - "50062:50062"  # RDK-61158: CRL control endpoint
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
       - ENABLE_MTLS=true
+      - ENABLE_CRL_L3=true
 
 
   l2-container:
@@ -38,6 +41,7 @@ services:
       - apparmor=unconfined 
     environment:
       - ENABLE_MTLS=true    
+      - ENABLE_CRL_L3=true
   
   nmap-container:
     image: "ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest"

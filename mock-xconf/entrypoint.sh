@@ -61,5 +61,17 @@ else
 	ls -la /usr/local/bin/xpki* || echo "No xpki files in /usr/local/bin"
 fi
 
+## RDK-61158: Start CRL mTLS server (port 50061) + CRL control (port 50062)
+## crl-control.js is loaded as a module by crl-mtls-server.js (single process)
+ENABLE_CRL_L3=${ENABLE_CRL_L3:-false}
+if [ "$ENABLE_CRL_L3" = "true" ]; then
+	if [ -f /usr/local/bin/crl-mtls-server.js ]; then
+		node /usr/local/bin/crl-mtls-server.js &
+		echo "[entrypoint] crl-mtls-server started (ports 50061 + 50062)"
+	else
+		echo "[entrypoint] WARNING: /usr/local/bin/crl-mtls-server.js not found"
+	fi
+fi
+
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up
 while true ; do echo "Mocked webservice heartbeat ..." && sleep 5 ; done
