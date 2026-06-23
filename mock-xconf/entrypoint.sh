@@ -71,6 +71,36 @@ if [ "$ENABLE_CRL_L3" = "true" ]; then
 	else
 		echo "[entrypoint] WARNING: /usr/local/bin/crl-mtls-server.js not found"
 	fi
+
+	## RDK-61158: OCSP stapling infrastructure
+	## openssl ocsp daemon (port 50063) must start before ocsp-stapling-server.js
+	## so the stapling server can warm its cache during listen().
+	if [ -d /etc/xconf/certs/ocsp ] && \
+	   [ -f /etc/xconf/certs/ocsp/Test-CRL-ICA.pem ] && \
+	   [ -f /etc/xconf/certs/ocsp/ocsp-ca-chain.pem ] && \
+	   [ -f /etc/xconf/certs/ocsp/ocsp-responder.pem ] && \
+	   [ -f /etc/xconf/certs/ocsp/ocsp-responder.key ]; then
+		openssl ocsp \
+			-index /etc/pki/test-crl/Test-CRL-Root/Test-CRL-ICA/index.txt \
+			-port 50063 \
+			-rsigner /etc/xconf/certs/ocsp/ocsp-responder.pem \
+			-rkey   /etc/xconf/certs/ocsp/ocsp-responder.key \
+			-CA     /etc/xconf/certs/ocsp/Test-CRL-ICA.pem \
+			-text \
+			-ignore_err &
+		echo "[entrypoint] openssl ocsp responder started (port 50063)"
+		# Brief pause so the responder socket is open before the Node server
+		# tries to warm its cache
+		sleep 1
+		if [ -f /usr/local/bin/ocsp-stapling-server.js ]; then
+			node /usr/local/bin/ocsp-stapling-server.js &
+			echo "[entrypoint] ocsp-stapling-server started (port 50064)"
+		else
+			echo "[entrypoint] WARNING: /usr/local/bin/ocsp-stapling-server.js not found"
+		fi
+	else
+		echo "[entrypoint] WARNING: OCSP PKI certs not found — skipping OCSP servers"
+	fi
 fi
 
 ## Keep the container running . Running an independent process will help in simulating scenarios of webservices going down and coming up

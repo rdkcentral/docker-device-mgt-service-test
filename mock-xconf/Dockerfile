@@ -103,6 +103,10 @@ RUN chmod +x /usr/local/bin/crl-mtls-server.js
 COPY crl-control.js /usr/local/bin/crl-control.js
 RUN chmod +x /usr/local/bin/crl-control.js
 
+# RDK-61158: OCSP stapling server
+COPY ocsp-stapling-server.js /usr/local/bin/ocsp-stapling-server.js
+RUN chmod +x /usr/local/bin/ocsp-stapling-server.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
@@ -118,4 +122,6 @@ EXPOSE 50059
 EXPOSE 50060
 EXPOSE 50061
 EXPOSE 50062
+EXPOSE 50063
+EXPOSE 50064
 

@@ -530,6 +530,89 @@ NEWROOTCNFEOF
     chmod 644 "${SHARED_CERTS_DIR}/xs-client/"*.p12 \
               "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" 2>/dev/null || true
     echo "[certs] [CRL-L3] Cross-signed P12 bundles exported to ${SHARED_CERTS_DIR}/xs-client/"
+
+    # ── OCSP Stapling PKI ─────────────────────────────────────────────────────
+    # Reuse Test-CRL-Root → Test-CRL-ICA.  Create:
+    #   ocsp-responder cert  — signed by ICA, used by `openssl ocsp` daemon
+    #   ocsp-server cert     — signed by ICA, has AIA pointing to the OCSP
+    #                          responder at http://mockxconf:50063
+    # The openssl ocsp daemon (port 50063) is started by entrypoint.sh.
+    # ocsp-stapling-server.js (port 50064) handles the OCSPRequest TLS event,
+    # queries the daemon, caches the response, and staples it for every client.
+    echo "[certs] [CRL-L3] Generating OCSP PKI (responder cert + stapling server cert)..."
+
+    OCSP_DIR="/etc/xconf/certs/ocsp"
+    mkdir -p "${OCSP_DIR}"
+
+    # ── OCSP responder cert (signed by Test-CRL-ICA) ──────────────────────────
+    # Must have extendedKeyUsage=OCSPSigning.
+    openssl ecparam -name prime256v1 -genkey -noout \
+        -out "${OCSP_DIR}/ocsp-responder.key" 2>/dev/null
+    chmod 600 "${OCSP_DIR}/ocsp-responder.key"
+    openssl req -new \
+        -key "${OCSP_DIR}/ocsp-responder.key" \
+        -out /tmp/ocsp-responder.csr \
+        -subj "/C=US/O=RDK Test/CN=ocsp-responder" 2>/dev/null
+    cat > /tmp/ocsp-resp-ext.cnf << 'OCSPRESPEOF'
+basicConstraints       = CA:FALSE
+keyUsage               = critical,digitalSignature
+extendedKeyUsage       = critical,OCSPSigning
+subjectKeyIdentifier   = hash
+OCSPRESPEOF
+    openssl x509 -req \
+        -in /tmp/ocsp-responder.csr \
+        -CA "${CRL_ICA_DIR}/certs/Test-CRL-ICA.pem" \
+        -CAkey "${CRL_ICA_DIR}/private/Test-CRL-ICA.key" \
+        -CAcreateserial \
+        -out "${OCSP_DIR}/ocsp-responder.pem" \
+        -days 365 -sha256 \
+        -extfile /tmp/ocsp-resp-ext.cnf 2>/dev/null
+    rm -f /tmp/ocsp-responder.csr /tmp/ocsp-resp-ext.cnf
+    chmod 644 "${OCSP_DIR}/ocsp-responder.pem"
+    echo "[certs] [CRL-L3] OCSP responder cert created"
+
+    # ── OCSP stapling server cert (signed by ICA, AIA = OCSP responder) ───────
+    openssl ecparam -name prime256v1 -genkey -noout \
+        -out "${OCSP_DIR}/ocsp-server.key" 2>/dev/null
+    chmod 600 "${OCSP_DIR}/ocsp-server.key"
+    openssl req -new \
+        -key "${OCSP_DIR}/ocsp-server.key" \
+        -out /tmp/ocsp-server.csr \
+        -subj "/C=US/O=RDK Test/CN=mockxconf" 2>/dev/null
+    cat > /tmp/ocsp-srv-ext.cnf << 'OCSPSVEOF'
+basicConstraints       = CA:FALSE
+keyUsage               = critical,digitalSignature,keyEncipherment
+extendedKeyUsage       = serverAuth
+subjectKeyIdentifier   = hash
+subjectAltName         = DNS:mockxconf
+authorityInfoAccess    = OCSP;URI:http://mockxconf:50063
+OCSPSVEOF
+    openssl ca \
+        -config "${CRL_ICA_DIR}/openssl.cnf" \
+        -in /tmp/ocsp-server.csr \
+        -out "${OCSP_DIR}/ocsp-server.pem" \
+        -extensions v3_ocsp_server \
+        -days 365 \
+        -batch \
+        -notext 2>/dev/null || \
+    openssl x509 -req \
+        -in /tmp/ocsp-server.csr \
+        -CA "${CRL_ICA_DIR}/certs/Test-CRL-ICA.pem" \
+        -CAkey "${CRL_ICA_DIR}/private/Test-CRL-ICA.key" \
+        -CAcreateserial \
+        -out "${OCSP_DIR}/ocsp-server.pem" \
+        -days 365 -sha256 \
+        -extfile /tmp/ocsp-srv-ext.cnf 2>/dev/null
+    rm -f /tmp/ocsp-server.csr /tmp/ocsp-srv-ext.cnf
+    chmod 644 "${OCSP_DIR}/ocsp-server.pem"
+
+    # Copy ICA and Root to OCSP dir for easy server access
+    cp "${CRL_ICA_DIR}/certs/Test-CRL-ICA.pem" "${OCSP_DIR}/Test-CRL-ICA.pem"
+    cp "${CRL_ROOT_DIR}/certs/Test-CRL-Root.pem" "${OCSP_DIR}/Test-CRL-Root.pem"
+    # Combined CA chain for the openssl ocsp daemon -CAfile argument
+    cat "${CRL_ICA_DIR}/certs/Test-CRL-ICA.pem" \
+        "${CRL_ROOT_DIR}/certs/Test-CRL-Root.pem" > "${OCSP_DIR}/ocsp-ca-chain.pem"
+    echo "[certs] [CRL-L3] OCSP stapling server cert created (AIA: http://mockxconf:50063)"
 fi
 
 exit 0
