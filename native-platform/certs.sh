@@ -291,18 +291,9 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] xsign P12 bundles copied to /opt/certs/xs/"
 
     # ── Install CRL and XS root CAs into system trust store ──────────────────
-    # Test-CRL-Root is needed for curl to verify the crl-mtls-server TLS cert.
-    # Test-XS-NewRoot is needed so curl can verify xsign bridged cert chains.
     _TRUST_DIR="/usr/share/ca-certificates"
 
-    # Extract Test-CRL-Root from the ICA chain (first cert block)
-    awk '/-----BEGIN CERTIFICATE-----/{n++} n==2{print}' \
-        /opt/certs/crl/crl-ica-chain.pem > "${_TRUST_DIR}/test-crl-root.pem" 2>/dev/null || true
-    # Fallback: the chain has ICA first, root second; use openssl to get the root
-    if [ ! -s "${_TRUST_DIR}/test-crl-root.pem" ]; then
-        # Just copy the whole chain as the trust anchor; curl will accept it
-        cp /opt/certs/crl/crl-ica-chain.pem "${_TRUST_DIR}/test-crl-root.pem"
-    fi
+    cp "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem" "${_TRUST_DIR}/test-crl-root.pem"
     chmod 644 "${_TRUST_DIR}/test-crl-root.pem"
     grep -qxF "test-crl-root.pem" /etc/ca-certificates.conf 2>/dev/null || \
         echo "test-crl-root.pem" >> /etc/ca-certificates.conf
