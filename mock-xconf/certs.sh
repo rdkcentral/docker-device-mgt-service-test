@@ -372,10 +372,30 @@ SRVEXTEOF
     fi
     XS_OUT_DIR="/etc/xconf/certs/xs"
     mkdir -p "${XS_OUT_DIR}"
+    _GEN_XS_TMP="/tmp/_gen_xs_$$.sh"
+    _CERT_UTILS_SRC="$(dirname "${_GEN_XS}")/cert_utils.sh"
+    tr -d '\r' < "${_GEN_XS}" > "${_GEN_XS_TMP}"
+    # cert_utils.sh is sourced by generate_cross_signed_test_certs.sh relative
+    # to the script's own directory; copy it alongside the temp script.
+    if [ -f "${_CERT_UTILS_SRC}" ]; then
+        tr -d '\r' < "${_CERT_UTILS_SRC}" > "/tmp/cert_utils.sh"
+    fi
+    # Copy all other helper scripts from the same directory (create_ca.sh etc.)
+    # stripping CRLF from each, so sourcing them works under bash inside the container.
+    _SCRIPTS_DIR="$(dirname "${_GEN_XS}")"
+    for _S in "${_SCRIPTS_DIR}"/*.sh; do
+        _SN="$(basename "${_S}")"
+        [ "${_SN}" = "generate_cross_signed_test_certs.sh" ] && continue
+        [ "${_SN}" = "cert_utils.sh" ] && continue
+        tr -d '\r' < "${_S}" > "/tmp/${_SN}" 2>/dev/null || true
+    done
+    chmod +x /tmp/*.sh 2>/dev/null || true
+    chmod +x "${_GEN_XS_TMP}"
     CERT_DIR=/etc/pki/test-xs \
     OUT_DIR="${XS_OUT_DIR}" \
     XS_EXPIRY=1 \
-    "${_GEN_XS}"
+    bash "${_GEN_XS_TMP}"
+    rm -f "${_GEN_XS_TMP}" "/tmp/cert_utils.sh"
     echo "[certs] [CRL-L3] Cross-signed PKI generated (XS_EXPIRY=1)"
 
     # ── Generate empty CRLs for all XS PKI CAs ───────────────────────────────
@@ -571,7 +591,10 @@ OCSPRESPEOF
     chmod 644 "${OCSP_DIR}/ocsp-responder.pem"
     echo "[certs] [CRL-L3] OCSP responder cert created"
 
-    # ── OCSP stapling server cert (signed by ICA, AIA = OCSP responder) ───────
+    # ── OCSP stapling server cert (signed by ICA via openssl ca so it is ────────
+    # tracked in the ICA index.txt, which the OCSP responder needs to return
+    # status=good.  Using openssl x509 -req bypasses the database and causes
+    # the responder to return status=unknown.
     openssl ecparam -name prime256v1 -genkey -noout \
         -out "${OCSP_DIR}/ocsp-server.key" 2>/dev/null
     chmod 600 "${OCSP_DIR}/ocsp-server.key"
@@ -579,14 +602,16 @@ OCSPRESPEOF
         -key "${OCSP_DIR}/ocsp-server.key" \
         -out /tmp/ocsp-server.csr \
         -subj "/C=US/O=RDK Test/CN=mockxconf" 2>/dev/null
-    cat > /tmp/ocsp-srv-ext.cnf << 'OCSPSVEOF'
+    cat >> "${CRL_ICA_DIR}/openssl.cnf" << 'OCSPSRVEOF'
+
+[ v3_ocsp_server ]
 basicConstraints       = CA:FALSE
 keyUsage               = critical,digitalSignature,keyEncipherment
 extendedKeyUsage       = serverAuth
 subjectKeyIdentifier   = hash
 subjectAltName         = DNS:mockxconf
 authorityInfoAccess    = OCSP;URI:http://mockxconf:50063
-OCSPSVEOF
+OCSPSRVEOF
     openssl ca \
         -config "${CRL_ICA_DIR}/openssl.cnf" \
         -in /tmp/ocsp-server.csr \
@@ -594,16 +619,8 @@ OCSPSVEOF
         -extensions v3_ocsp_server \
         -days 365 \
         -batch \
-        -notext 2>/dev/null || \
-    openssl x509 -req \
-        -in /tmp/ocsp-server.csr \
-        -CA "${CRL_ICA_DIR}/certs/Test-CRL-ICA.pem" \
-        -CAkey "${CRL_ICA_DIR}/private/Test-CRL-ICA.key" \
-        -CAcreateserial \
-        -out "${OCSP_DIR}/ocsp-server.pem" \
-        -days 365 -sha256 \
-        -extfile /tmp/ocsp-srv-ext.cnf 2>/dev/null
-    rm -f /tmp/ocsp-server.csr /tmp/ocsp-srv-ext.cnf
+        -notext 2>/dev/null
+    rm -f /tmp/ocsp-server.csr
     chmod 644 "${OCSP_DIR}/ocsp-server.pem"
 
     # Copy ICA and Root to OCSP dir for easy server access
