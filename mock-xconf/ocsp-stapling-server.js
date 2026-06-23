@@ -54,8 +54,11 @@ const { execFile } = require('node:child_process');
 
 const PORT = 50064;
 
-// OCSP responder address (openssl ocsp daemon started by entrypoint.sh)
-const OCSP_RESPONDER_URL = 'http://mockxconf:50063';
+// OCSP responder address (openssl ocsp daemon started by entrypoint.sh).
+// Use 127.0.0.1 (not the container name) because this fetch originates from
+// WITHIN the mockxconf container — the container hostname 'mockxconf' only
+// resolves from OTHER containers via Docker DNS / --link, not from itself.
+const OCSP_RESPONDER_URL = 'http://127.0.0.1:50063';
 
 // How often (ms) to pro-actively refresh the stapled OCSP response
 // 30 minutes as specified by the architecture owner
