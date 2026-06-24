@@ -15,10 +15,10 @@ services:
       - "50058:50058"
       - "50059:50059"  # Crash metadata endpoint
       - "50060:50060"  # S3 presigned URL endpoint
-      - "50061:50061"  # RDK-61158: CRL mTLS server
-      - "50062:50062"  # RDK-61158: CRL control endpoint
-      - "50063:50063"  # RDK-61158: OCSP responder
-      - "50064:50064"  # RDK-61158: OCSP stapling server
+      - "50061:50061"  # CRL mTLS server
+      - "50062:50062"  # CRL control endpoint
+      - "50063:50063"  # OCSP responder
+      - "50064:50064"  # OCSP stapling server
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:

@@ -10,7 +10,7 @@ CONTAINERS = ["mockxconf", "native-platform"]
 
 # Define expected open ports for mockxconf only (since you want IPv6 check for mockxconf)
 # RDK-61060: Added port 50055 for xpki-certifier service
-# RDK-61158: Added ports 50061 (CRL mTLS) and 50062 (CRL control)
+# Added ports 50061 (CRL mTLS) and 50062 (CRL control)
 MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059, 50060, 50061, 50062]  # Example IPv6 ports for mockxconf
 
 # Define expected files in each container

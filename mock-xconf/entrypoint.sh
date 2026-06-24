@@ -61,7 +61,7 @@ else
 	ls -la /usr/local/bin/xpki* || echo "No xpki files in /usr/local/bin"
 fi
 
-## RDK-61158: Start CRL mTLS server (port 50061) + CRL control (port 50062)
+## Start CRL mTLS server (port 50061) + CRL control (port 50062)
 ## crl-control.js is loaded as a module by crl-mtls-server.js (single process)
 ENABLE_CRL_L3=${ENABLE_CRL_L3:-false}
 if [ "$ENABLE_CRL_L3" = "true" ]; then
@@ -72,7 +72,7 @@ if [ "$ENABLE_CRL_L3" = "true" ]; then
 		echo "[entrypoint] WARNING: /usr/local/bin/crl-mtls-server.js not found"
 	fi
 
-	## RDK-61158: OCSP stapling infrastructure
+	## OCSP stapling infrastructure
 	## openssl ocsp daemon (port 50063) must start before ocsp-stapling-server.js
 	## so the stapling server can warm its cache during listen().
 	if [ -d /etc/xconf/certs/ocsp ] && \
