@@ -131,92 +131,33 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS certificate trust flow established"
 fi
 
-# ─── RDK-61158: CRL mTLS L3 Test PKI ─────────────────────────────────────────
-# Gated on ENABLE_CRL_L3=true.  Calls scripts from rdk-cert-config/test/cert-scripts/
-# to generate all PKI material.  Follows the same pattern as generate_test_rdk_certs.sh.
+# ─── CRL mTLS L3 Test PKI ────────────────────────────────────────────────────
 ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
 if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] Starting L3 PKI generation..."
 
-    # ── Locate cert-scripts directory ─────────────────────────────────────────
-    _SCRIPTS="/etc/pki/scripts"
-    if [ ! -d "${_SCRIPTS}" ] || [ ! -f "${_SCRIPTS}/generate_crl_test_certs.sh" ]; then
-        _SCRIPTS="/mnt/L2_CONTAINER_SHARED_VOLUME/rdk-cert-config/test/cert-scripts"
-    fi
-    if [ ! -f "${_SCRIPTS}/generate_crl_test_certs.sh" ]; then
-        echo "[certs] [CRL-L3] ERROR: generate_crl_test_certs.sh not found" >&2
-        exit 1
-    fi
-
-    # Helper: run a script stripping CRLF (for Windows-mounted volumes)
-    _run_script() {
-        local _src="$1"; shift
-        local _tmp="/tmp/_run_$$.sh"
-        tr -d '\r' < "${_src}" > "${_tmp}"
-        chmod +x "${_tmp}"
-        bash "${_tmp}" "$@"
-        rm -f "${_tmp}"
-    }
-
-    # Copy helper scripts to /tmp with CRLF stripped (sourced by sub-scripts)
-    for _f in "${_SCRIPTS}"/*.sh; do
-        tr -d '\r' < "${_f}" > "/tmp/$(basename "${_f}")" 2>/dev/null || true
-    done
-    chmod +x /tmp/*.sh 2>/dev/null || true
-
     # ── 1. Generate CRL + OCSP PKI ───────────────────────────────────────────
+    # Server certs -> /etc/xconf/certs/crl and /etc/xconf/certs/ocsp
+    # Client certs -> shared volume for native-platform
     CERT_DIR=/etc/pki/test-crl \
     OUT_DIR=/etc/xconf/certs/crl \
     SERVER_CN=mockxconf \
-    _run_script "${_SCRIPTS}/generate_crl_test_certs.sh"
+    CLIENT_OUT_DIR="${SHARED_CERTS_DIR}/crl-client" \
+    OCSP_OUT_DIR=/etc/xconf/certs/ocsp \
+    bash /etc/pki/scripts/generate_crl_test_certs.sh
 
     # ── 2. Generate cross-signed PKI ─────────────────────────────────────────
-    XS_OUT_DIR="/etc/xconf/certs/xs"
-    mkdir -p "${XS_OUT_DIR}"
+    # P12 bundles -> shared volume for native-platform
     CERT_DIR=/etc/pki/test-xs \
-    OUT_DIR="${XS_OUT_DIR}" \
+    OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
     XS_EXPIRY=1 \
-    _run_script "${_SCRIPTS}/generate_cross_signed_test_certs.sh"
+    bash /etc/pki/scripts/generate_cross_signed_test_certs.sh
 
     # ── 3. Generate XS CRLs + expired bridge ─────────────────────────────────
     XS_CERT_DIR=/etc/pki/test-xs \
-    XS_OUT_DIR="${XS_OUT_DIR}" \
-    _run_script "${_SCRIPTS}/generate_xs_crl_and_expired_bridge.sh"
+    XS_OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
+    bash /etc/pki/scripts/generate_xs_crl_and_expired_bridge.sh
 
-    # ── 4. Copy OCSP certs to dedicated directory for ocsp-stapling-server ────
-    mkdir -p /etc/xconf/certs/ocsp
-    cp /etc/xconf/certs/crl/ocsp-server.key      /etc/xconf/certs/ocsp/ocsp-server.key
-    cp /etc/xconf/certs/crl/ocsp-server.pem      /etc/xconf/certs/ocsp/ocsp-server.pem
-    cp /etc/xconf/certs/crl/ocsp-responder.key   /etc/xconf/certs/ocsp/ocsp-responder.key
-    cp /etc/xconf/certs/crl/ocsp-responder.pem   /etc/xconf/certs/ocsp/ocsp-responder.pem
-    cp /etc/xconf/certs/crl/Test-CRL-ICA.pem     /etc/xconf/certs/ocsp/Test-CRL-ICA.pem
-    cp /etc/xconf/certs/crl/Test-CRL-Root.pem    /etc/xconf/certs/ocsp/Test-CRL-Root.pem
-    cp /etc/xconf/certs/crl/ocsp-ca-chain.pem    /etc/xconf/certs/ocsp/ocsp-ca-chain.pem
-    chmod 600 /etc/xconf/certs/ocsp/ocsp-server.key /etc/xconf/certs/ocsp/ocsp-responder.key
-
-    # ── 5. Export client certs to shared volume for native-platform ────────────
-    mkdir -p "${SHARED_CERTS_DIR}/crl-client"
-    cp /etc/xconf/certs/crl/crl-client.pem        "${SHARED_CERTS_DIR}/crl-client/crl-client.pem"
-    cp /etc/xconf/certs/crl/crl-client.key        "${SHARED_CERTS_DIR}/crl-client/crl-client.key"
-    cp /etc/xconf/certs/crl/crl-client.p12        "${SHARED_CERTS_DIR}/crl-client/crl-client.p12"
-    cp /etc/xconf/certs/crl/crl-ica-chain.pem     "${SHARED_CERTS_DIR}/crl-client/crl-ica-chain.pem"
-    cp /etc/xconf/certs/crl/Test-CRL-Root.pem     "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem"
-    chmod 600 "${SHARED_CERTS_DIR}/crl-client/crl-client.key"
-    chmod 644 "${SHARED_CERTS_DIR}/crl-client/crl-client.pem" \
-              "${SHARED_CERTS_DIR}/crl-client/crl-client.p12" \
-              "${SHARED_CERTS_DIR}/crl-client/crl-ica-chain.pem" \
-              "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem"
-    echo "[certs] [CRL-L3] CRL client certs exported to shared volume"
-
-    mkdir -p "${SHARED_CERTS_DIR}/xs-client"
-    cp "${XS_OUT_DIR}/client-xsign.p12" "${SHARED_CERTS_DIR}/xs-client/client-xsign.p12"
-    cp "${XS_OUT_DIR}/client-old.p12"   "${SHARED_CERTS_DIR}/xs-client/client-old.p12"
-    cp "${XS_OUT_DIR}/client-expxs.p12" "${SHARED_CERTS_DIR}/xs-client/client-expxs.p12"
-    [ -f "${XS_OUT_DIR}/NewRoot.pem" ] && \
-        cp "${XS_OUT_DIR}/NewRoot.pem"  "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem"
-    chmod 644 "${SHARED_CERTS_DIR}/xs-client/"*.p12 \
-              "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" 2>/dev/null || true
-    echo "[certs] [CRL-L3] XS client certs exported to shared volume"
     echo "[certs] [CRL-L3] All L3 PKI generation complete"
 fi
 

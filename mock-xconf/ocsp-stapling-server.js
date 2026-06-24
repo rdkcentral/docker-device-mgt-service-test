@@ -18,7 +18,7 @@
 */
 
 /**
- * OCSP Stapling Server (RDK-61158 L3)
+ * OCSP Stapling Server (L3)
  *
  * Listens on port 50064 with one-way TLS (server presents cert; no client
  * cert required).  The server cert is signed by Test-CRL-ICA and carries an
@@ -77,7 +77,7 @@ const CA_CHAIN    = '/etc/xconf/certs/ocsp/ocsp-ca-chain.pem';
 // ─── Startup diagnostics ──────────────────────────────────────────────────────
 
 console.log('[ocsp-stapling-server] ==========================================');
-console.log('[ocsp-stapling-server] OCSP Stapling Server starting (RDK-61158)');
+console.log('[ocsp-stapling-server] OCSP Stapling Server starting');
 console.log('[ocsp-stapling-server] ==========================================');
 console.log(`[ocsp-stapling-server] Node.js ${process.version}  PID ${process.pid}`);
 console.log(`[ocsp-stapling-server] Target port: ${PORT}`);

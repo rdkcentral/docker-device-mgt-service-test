@@ -97,13 +97,13 @@ RUN chmod +x /usr/local/bin/crashUpload.js
 COPY xpki-certifier.js /usr/local/bin/xpki-certifier.js
 RUN chmod +x /usr/local/bin/xpki-certifier.js
 
-# RDK-61158: CRL mTLS server and CRL control server
+# CRL mTLS server and CRL control server
 COPY crl-mtls-server.js /usr/local/bin/crl-mtls-server.js
 RUN chmod +x /usr/local/bin/crl-mtls-server.js
 COPY crl-control.js /usr/local/bin/crl-control.js
 RUN chmod +x /usr/local/bin/crl-control.js
 
-# RDK-61158: OCSP stapling server
+# OCSP stapling server
 COPY ocsp-stapling-server.js /usr/local/bin/ocsp-stapling-server.js
 RUN chmod +x /usr/local/bin/ocsp-stapling-server.js
 

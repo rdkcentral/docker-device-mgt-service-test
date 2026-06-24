@@ -18,7 +18,7 @@
 */
 
 /**
- * CRL Control Server (RDK-61158 L3)
+ * CRL Control Server (L3)
  *
  * Plain HTTP server on port 50062 — intentionally no TLS since this endpoint
  * is only reachable on the internal Docker bridge network.
