@@ -24,6 +24,18 @@
 ENABLE_MTLS=${ENABLE_MTLS:-false}
 export ENABLE_MTLS
 
+## Overlay cert-scripts from the shared workspace volume (local dev / topic branch).
+## When the volume is mounted (docker compose up), this picks up any new or
+## updated scripts from rdk-cert-config/test/cert-scripts/ without requiring a
+## full image rebuild.  In a pre-built image without the volume mount the
+## fallback is the scripts that were cloned from GitHub at build time.
+_LOCAL_SCRIPTS="/mnt/L2_CONTAINER_SHARED_VOLUME/rdk-cert-config/test/cert-scripts"
+if [ -d "${_LOCAL_SCRIPTS}" ]; then
+	cp "${_LOCAL_SCRIPTS}"/*.sh /usr/share/cert-scripts/
+	chmod +x /usr/share/cert-scripts/*.sh
+	echo "[entrypoint] Overlaid cert scripts from ${_LOCAL_SCRIPTS}"
+fi
+
 ## Certificate setup
 /usr/local/bin/certs.sh
 CERTS_RC=$?

@@ -1,0 +1,7 @@
+# Force LF line endings for all text files in this repo.
+* text=auto eol=lf
+
+*.p12   binary
+*.pem   binary
+*.der   binary
+*.crt   binary

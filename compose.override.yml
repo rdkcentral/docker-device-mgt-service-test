@@ -1,0 +1,13 @@
+services:
+  mock-xconf:
+    image: mockxconf-local
+    volumes:
+      - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+      - ./mock-xconf/certs.sh:/usr/local/bin/certs.sh
+
+  l2-container:
+    links:
+      - mock-xconf:mockxconf
+    volumes:
+      - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+      - ./native-platform/certs.sh:/usr/local/bin/certs.sh
