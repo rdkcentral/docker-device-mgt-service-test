@@ -253,14 +253,10 @@ ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
 if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] Waiting for CRL client cert from mock-xconf..."
 
-    # ── Wait for the single readiness sentinel ───────────────────────────────
-    # mock-xconf writes .l3_pki_ready only after ALL PKI generation (CRL client,
-    # xsign bundles, expired bridge) is complete and after it has wiped any
-    # stale output.  Waiting on this single marker before copying anything
-    # eliminates the race where a stale crl-client.p12 is consumed mid-rm -rf.
-    while [ ! -f "${SHARED_CERTS_DIR}/.l3_pki_ready" ]; do
+    # ── Wait for CRL client cert ──────────────────────────────────────────────
+    while [ ! -f "${SHARED_CERTS_DIR}/crl-client/crl-client.p12" ]; do
         sleep 1
-        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/.l3_pki_ready..."
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12..."
     done
 
     mkdir -p /opt/certs/crl
@@ -274,9 +270,15 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
               /opt/certs/crl/crl-ica-chain.pem
     echo "[certs] [CRL-L3] CRL client cert assets copied to /opt/certs/crl/"
 
-    # ── Copy xsign P12 bundles ───────────────────────────────────────────────
-    # The .l3_pki_ready sentinel already guarantees client-xsign.p12,
-    # client-old.p12 and client-expxs.p12 all exist and are final.
+    # ── Wait for xsign P12 bundles ────────────────────────────────────────────
+    # client-expxs.p12 is the last file written by the XS PKI generation, so
+    # its presence implies client-xsign.p12 and client-old.p12 also exist.
+    echo "[certs] [CRL-L3] Waiting for xsign P12 bundles from mock-xconf..."
+    while [ ! -f "${SHARED_CERTS_DIR}/xs-client/client-expxs.p12" ]; do
+        sleep 1
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/client-expxs.p12..."
+    done
+
     mkdir -p /opt/certs/xs
     cp "${SHARED_CERTS_DIR}/xs-client/client-xsign.p12" /opt/certs/xs/client-xsign.p12
     cp "${SHARED_CERTS_DIR}/xs-client/client-old.p12"   /opt/certs/xs/client-old.p12

@@ -31,11 +31,6 @@ echo "[certs] Starting with mTLS: $ENABLE_MTLS"
 SHARED_CERTS_DIR="/mnt/L2_CONTAINER_SHARED_VOLUME/shared_certs"
 mkdir -p "$SHARED_CERTS_DIR"
 
-# Clear any stale L3 readiness sentinel at the very start of this run, before
-# native-platform (which runs concurrently) can observe it.  The fresh sentinel
-# is republished only after all L3 PKI generation completes further below.
-rm -f "${SHARED_CERTS_DIR}/.l3_pki_ready"
-
 echo "[certs] Generating server certificates for MockXconf using generate_test_rdk_certs.sh..."
 
 # Generate server certificates with mockxconf as CN
@@ -141,9 +136,8 @@ ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
 if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] Starting L3 PKI generation..."
 
-    # Remove stale PKI output from any previous run so native-platform always
-    # installs root CA certs that match the freshly generated server certs.
-    rm -rf "${SHARED_CERTS_DIR}/crl-client" "${SHARED_CERTS_DIR}/xs-client"
+    # Ensure client cert output directories exist.  generate_crl_test_certs.sh
+    # writes into CLIENT_OUT_DIR but does not create it itself.
     mkdir -p "${SHARED_CERTS_DIR}/crl-client" "${SHARED_CERTS_DIR}/xs-client"
 
     # ── 1. Generate CRL + OCSP PKI ───────────────────────────────────────────
@@ -169,12 +163,6 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     bash /etc/pki/scripts/generate_xs_crl_and_expired_bridge.sh
 
     echo "[certs] [CRL-L3] All L3 PKI generation complete"
-
-    # Publish the readiness sentinel LAST.  Its presence guarantees that every
-    # crl-client/* and xs-client/* file is final and will not be wiped again,
-    # so native-platform can copy them without racing the rm -rf above.
-    touch "${SHARED_CERTS_DIR}/.l3_pki_ready"
-    echo "[certs] [CRL-L3] Published readiness sentinel (.l3_pki_ready)"
 fi
 
 exit 0
