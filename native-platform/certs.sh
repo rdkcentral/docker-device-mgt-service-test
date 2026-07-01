@@ -264,9 +264,10 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     cp "${SHARED_CERTS_DIR}/crl-client/crl-client.key"    /opt/certs/crl/crl-client.key
     cp "${SHARED_CERTS_DIR}/crl-client/crl-client.p12"    /opt/certs/crl/crl-client.p12
     cp "${SHARED_CERTS_DIR}/crl-client/crl-ica-chain.pem" /opt/certs/crl/crl-ica-chain.pem
-    chmod 600 /opt/certs/crl/crl-client.key
+    # Private-key-bearing artifacts (.key and .p12) get 600; public PEM/chain get 644.
+    chmod 600 /opt/certs/crl/crl-client.key \
+              /opt/certs/crl/crl-client.p12
     chmod 644 /opt/certs/crl/crl-client.pem \
-              /opt/certs/crl/crl-client.p12 \
               /opt/certs/crl/crl-ica-chain.pem
     echo "[certs] [CRL-L3] CRL client cert assets copied to /opt/certs/crl/"
 
@@ -287,7 +288,8 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
         cp "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem"  /opt/certs/xs/NewRoot.pem
         chmod 644 /opt/certs/xs/NewRoot.pem
     fi
-    chmod 644 /opt/certs/xs/client-xsign.p12 \
+    # XS client bundles contain private keys -> restrict to 600.
+    chmod 600 /opt/certs/xs/client-xsign.p12 \
               /opt/certs/xs/client-old.p12 \
               /opt/certs/xs/client-expxs.p12
     echo "[certs] [CRL-L3] xsign P12 bundles copied to /opt/certs/xs/"
