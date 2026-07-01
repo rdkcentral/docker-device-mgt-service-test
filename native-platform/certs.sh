@@ -272,12 +272,15 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] CRL client cert assets copied to /opt/certs/crl/"
 
     # ── Wait for xsign P12 bundles ────────────────────────────────────────────
-    # client-expxs.p12 is the last file written by the XS PKI generation, so
-    # its presence implies client-xsign.p12 and client-old.p12 also exist.
+    # NewRoot.pem is written LAST and ONLY by generate_xs_crl_and_expired_bridge.sh
+    # (step 3), after it re-bundles client-expxs.p12 with the truly-expired bridge.
+    # client-expxs.p12 itself is written twice (step 2 = still-valid 1-day bridge,
+    # step 3 = expired bridge), so waiting on it can race and copy the valid v1.
+    # Gate on NewRoot.pem so the expired-bridge rewrite is guaranteed complete.
     echo "[certs] [CRL-L3] Waiting for xsign P12 bundles from mock-xconf..."
-    while [ ! -f "${SHARED_CERTS_DIR}/xs-client/client-expxs.p12" ]; do
+    while [ ! -f "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" ]; do
         sleep 1
-        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/client-expxs.p12..."
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/NewRoot.pem..."
     done
 
     mkdir -p /opt/certs/xs
