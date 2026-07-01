@@ -17,8 +17,10 @@ services:
       - "50060:50060"  # S3 presigned URL endpoint
       - "50061:50061"  # CRL mTLS server
       - "50062:50062"  # CRL control endpoint
-      - "50063:50063"  # OCSP responder
-      - "50064:50064"  # OCSP stapling server
+      # 50063 (OCSP responder) and 50064 (OCSP stapling server) are internal-only:
+      # 50063 is queried from 127.0.0.1 inside the container, and 50064 is reached
+      # container-to-container over the Docker network, so neither is published to
+      # the host. They remain EXPOSEd in the Dockerfile for documentation.
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:

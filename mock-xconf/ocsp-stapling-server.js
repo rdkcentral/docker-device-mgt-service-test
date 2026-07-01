@@ -46,7 +46,6 @@
 'use strict';
 
 const https       = require('node:https');
-const http        = require('node:http');
 const fs          = require('node:fs');
 const { execFile } = require('node:child_process');
 
