@@ -87,9 +87,13 @@ let busy = false;
  * Returns true if safe, false if the path escapes the allowed directory.
  */
 function isAllowedCertPath(certFile) {
-  if (typeof certFile !== 'string' || certFile.length === 0) return false;
-  const resolved = path.resolve(certFile);
-  return resolved.startsWith(CERT_BASE) && !resolved.includes('\0');
+  if (typeof certFile !== 'string' || certFile.length === 0 || certFile.includes('\0')) return false;
+  try {
+    const resolved = path.resolve(certFile);
+    return resolved.startsWith(CERT_BASE);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -149,7 +153,12 @@ const server = http.createServer(async (req, res) => {
     busy = true;
     try {
       const body   = await readBody(req);
-      const parsed = JSON.parse(body);
+      let parsed;
+      try {
+        parsed = JSON.parse(body);
+      } catch (_) {
+        return jsonErr(res, 400, 'invalid JSON body');
+      }
       const { certFile } = parsed;
 
       if (!isAllowedCertPath(certFile)) {

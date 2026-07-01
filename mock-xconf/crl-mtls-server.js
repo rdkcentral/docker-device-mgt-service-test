@@ -32,7 +32,7 @@
  * The HTTP control server on port 50062 is started by requiring crl-control.js.
  *
  * Security notes:
- *   - Private key paths are never written to logs.
+ *   - Private key material (contents/passphrases) is never written to logs.
  *   - requestCert + rejectUnauthorized ensure clients without a valid cert are
  *     rejected at the TLS layer, not the application layer.
  */
