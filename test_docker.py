@@ -48,7 +48,7 @@ def test_ports_are_open_ipv6_mockxconf(container):
         print(f"✅ Port {port} is open in {container.name}")
 
 def test_node_processes_running_mockxconf(container):
-    """Ensure exactly 9 Node.js processes are running inside mockxconf."""
+    """Ensure exactly 10 Node.js processes are running inside mockxconf."""
     if container.name != "mockxconf":
         pytest.skip(f"Skipping Node.js process check for {container.name}")
 

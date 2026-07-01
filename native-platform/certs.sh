@@ -293,16 +293,14 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] xsign P12 bundles copied to /opt/certs/xs/"
 
     # ── Install CRL and XS root CAs into system trust store ──────────────────
-    _TRUST_DIR="/usr/share/ca-certificates"
-
-    cp "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem" "${_TRUST_DIR}/test-crl-root.pem"
-    chmod 644 "${_TRUST_DIR}/test-crl-root.pem"
+    cp "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem" "${SYSTEM_TRUST_STORE}/test-crl-root.pem"
+    chmod 644 "${SYSTEM_TRUST_STORE}/test-crl-root.pem"
     grep -qxF "test-crl-root.pem" /etc/ca-certificates.conf 2>/dev/null || \
         echo "test-crl-root.pem" >> /etc/ca-certificates.conf
 
     if [ -f /opt/certs/xs/NewRoot.pem ]; then
-        cp /opt/certs/xs/NewRoot.pem "${_TRUST_DIR}/test-xs-newroot.pem"
-        chmod 644 "${_TRUST_DIR}/test-xs-newroot.pem"
+        cp /opt/certs/xs/NewRoot.pem "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
+        chmod 644 "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
         grep -qxF "test-xs-newroot.pem" /etc/ca-certificates.conf 2>/dev/null || \
             echo "test-xs-newroot.pem" >> /etc/ca-certificates.conf
     fi
