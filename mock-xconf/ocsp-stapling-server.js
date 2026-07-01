@@ -106,7 +106,10 @@ let lastRefreshTime    = 0;
  */
 function fetchOcspResponse() {
   return new Promise((resolve) => {
-    const derFile = `/tmp/ocsp-staple-${Date.now()}.der`;
+    // Unique per-invocation temp file: pid + timestamp + random suffix avoids
+    // collisions if fetchOcspResponse() runs twice in the same millisecond
+    // (e.g. periodic refresh racing a cold-cache handshake).
+    const derFile = `/tmp/ocsp-staple-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.der`;
     // openssl ocsp arguments:
     //   -issuer      the issuer cert that signed the server cert
     //   -cert        the server cert whose status we want
@@ -128,27 +131,30 @@ function fetchOcspResponse() {
     ];
 
     execFile('openssl', args, { timeout: 8000 }, (err, stdout, stderr) => {
+      const cleanup = () => { try { fs.unlinkSync(derFile); } catch (_) {} };
+
       if (err) {
         console.error(`[ocsp-stapling-server] openssl ocsp error: ${err.message}`);
         console.error(`[ocsp-stapling-server] stderr: ${stderr}`);
+        cleanup();
         resolve(null);
         return;
       }
-      // stdout contains "Response verify OK" and "ocsp-server.pem: good" on success
-      if (stdout.includes(': good') || stdout.includes('Response verify OK')) {
-        try {
-          const der = fs.readFileSync(derFile);
-          fs.unlinkSync(derFile);
-          console.log(`[ocsp-stapling-server] OCSP response fetched (${der.length} bytes, status: good)`);
-          resolve(der);
-        } catch (e) {
-          console.error(`[ocsp-stapling-server] Failed to read OCSP DER file: ${e.message}`);
-          resolve(null);
-        }
-      } else {
-        console.error(`[ocsp-stapling-server] Unexpected OCSP output: ${stdout}`);
-        // Clean up temp file if it exists
-        try { fs.unlinkSync(derFile); } catch (_) {}
+
+      // openssl produces a valid DER response via -respout for good/revoked/unknown
+      // alike. Staple whatever it produced regardless of status so negative test
+      // cases (e.g. revoked) still receive a stapled response; just log the status.
+      try {
+        const der = fs.readFileSync(derFile);
+        cleanup();
+        const m = stdout.match(/:\s*(good|revoked|unknown)/i);
+        const status = m ? m[1].toLowerCase() : 'unknown';
+        console.log(`[ocsp-stapling-server] OCSP response fetched (${der.length} bytes, status: ${status})`);
+        resolve(der);
+      } catch (e) {
+        cleanup();
+        console.error(`[ocsp-stapling-server] Failed to read OCSP DER file: ${e.message}`);
+        console.error(`[ocsp-stapling-server] openssl stdout: ${stdout}`);
         resolve(null);
       }
     });
