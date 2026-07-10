@@ -31,10 +31,8 @@
  *       regenerates the CRL, and hot-reloads the mTLS server context so new
  *       connections immediately see the updated CRL.
  *
- *   POST /crl/reset
- *       Regenerates a fresh empty CRL (no revocations) and hot-reloads the
- *       mTLS server context.  Used by the test driver to restore a clean state
- *       between test cases.
+ *       Revocation is permanent for the lifetime of the container (matching
+ *       real-world CRL semantics); there is no reset endpoint.
  *
  * Security notes:
  *   - certFile paths are validated to lie within the expected PKI directory
@@ -48,17 +46,11 @@
 
 const http           = require('node:http');
 const path           = require('node:path');
-const fs             = require('node:fs');
 const { execFileSync } = require('node:child_process');
 
 const PORT     = 50062;
 const ICA_CNF  = '/etc/pki/test-crl/Test-CRL-Root/Test-CRL-ICA/openssl.cnf';
 const CRL_FILE = '/etc/xconf/certs/crl/Test-CRL-ICA.crl.pem';
-
-// CA database file — must be restored to its initial state on /crl/reset so
-// that a previously-revoked cert can be revoked again in the next test.
-const ICA_DB         = '/etc/pki/test-crl/Test-CRL-Root/Test-CRL-ICA/index.txt';
-const ICA_DB_PRISTINE = '/etc/pki/test-crl/Test-CRL-Root/Test-CRL-ICA/index.txt.pristine';
 
 // Allowed base directory for certFile path validation
 const CERT_BASE = '/etc/pki/test-crl/';
@@ -66,14 +58,6 @@ const CERT_BASE = '/etc/pki/test-crl/';
 // The HTTPS mTLS server; loaded after this module so require() returns the
 // already-created export (no circular-dependency issue at runtime).
 const crlMtlsServer = require('./crl-mtls-server');
-
-// ── Save pristine CA database at startup ─────────────────────────────────────
-// At startup index.txt contains only the valid (non-revoked) client cert entry.
-// We save this snapshot so /crl/reset can undo any revocations from prior tests.
-if (fs.existsSync(ICA_DB) && !fs.existsSync(ICA_DB_PRISTINE)) {
-  fs.copyFileSync(ICA_DB, ICA_DB_PRISTINE);
-  console.log('[crl-control] Saved pristine CA database for reset operations');
-}
 
 // ─── Busy flag ────────────────────────────────────────────────────────────────
 // Node.js is single-threaded; this flag serialises CRL operations so a fast
@@ -189,30 +173,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── POST /crl/reset ─────────────────────────────────────────────────────────
-  if (req.method === 'POST' && req.url === '/crl/reset') {
-    if (busy) {
-      return jsonErr(res, 503, 'busy');
-    }
-    busy = true;
-    try {
-      // Restore the pristine CA database so the cert is valid again and can be
-      // revoked in a subsequent test without openssl ca complaining.
-      if (fs.existsSync(ICA_DB_PRISTINE)) {
-        fs.copyFileSync(ICA_DB_PRISTINE, ICA_DB);
-      }
-      generateCrl();
-      reloadServerContext();
-      console.log('[crl-control] /crl/reset: CA database restored, CRL regenerated and reloaded');
-      jsonOk(res, { status: 'reset' });
-    } catch (err) {
-      console.error('[crl-control] /crl/reset error:', err.message);
-      jsonErr(res, 500, 'reset failed');
-    } finally {
-      busy = false;
-    }
-    return;
-  }
+  // ── POST /crl/revoke handled above; revocation is permanent (no reset). ──
 
   res.writeHead(404);
   res.end();

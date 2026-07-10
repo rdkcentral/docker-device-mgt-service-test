@@ -150,17 +150,14 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     OCSP_OUT_DIR=/etc/xconf/certs/ocsp \
     bash /etc/pki/scripts/generate_crl_test_certs.sh
 
-    # ── 2. Generate cross-signed PKI ─────────────────────────────────────────
-    # P12 bundles -> shared volume for native-platform
+    # ── 2. Generate cross-signed PKI (incl. XS CRLs + expired bridge) ────────
+    # P12 bundles -> shared volume for native-platform. The generator also
+    # produces the empty XS CRLs and the truly-expired bridge, and writes
+    # NewRoot.pem last as the readiness sentinel.
     CERT_DIR=/etc/pki/test-xs \
     OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
     XS_EXPIRY=1 \
     bash /etc/pki/scripts/generate_cross_signed_test_certs.sh
-
-    # ── 3. Generate XS CRLs + expired bridge ─────────────────────────────────
-    XS_CERT_DIR=/etc/pki/test-xs \
-    XS_OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
-    bash /etc/pki/scripts/generate_xs_crl_and_expired_bridge.sh
 
     echo "[certs] [CRL-L3] All L3 PKI generation complete"
 fi
