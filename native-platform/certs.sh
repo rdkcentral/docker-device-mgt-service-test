@@ -304,12 +304,10 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     grep -qxF "test-crl-root.pem" /etc/ca-certificates.conf 2>/dev/null || \
         echo "test-crl-root.pem" >> /etc/ca-certificates.conf
 
-    if [ -f /opt/certs/xs/NewRoot.pem ]; then
-        cp /opt/certs/xs/NewRoot.pem "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
-        chmod 644 "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
-        grep -qxF "test-xs-newroot.pem" /etc/ca-certificates.conf 2>/dev/null || \
-            echo "test-xs-newroot.pem" >> /etc/ca-certificates.conf
-    fi
+    cp /opt/certs/xs/NewRoot.pem "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
+    chmod 644 "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
+    grep -qxF "test-xs-newroot.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "test-xs-newroot.pem" >> /etc/ca-certificates.conf
 
     /usr/sbin/update-ca-certificates --fresh
     echo "[certs] [CRL-L3] Test-CRL-Root and Test-XS-NewRoot installed in system trust store"
