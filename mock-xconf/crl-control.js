@@ -46,7 +46,14 @@
 
 const http           = require('node:http');
 const path           = require('node:path');
+const fs             = require('node:fs');
 const { execFileSync } = require('node:child_process');
+
+// openssl invocations are bounded so a stuck process cannot wedge the server.
+const OPENSSL_TIMEOUT_MS = 15000;
+const OPENSSL_MAXBUFFER  = 1024 * 1024;
+// Cap the request body; this endpoint only receives a tiny JSON payload.
+const MAX_BODY_BYTES     = 64 * 1024;
 
 const PORT     = 50062;
 const ICA_CNF  = '/etc/pki/test-crl/Test-CRL-Root/Test-CRL-ICA/openssl.cnf';
@@ -55,8 +62,9 @@ const CRL_FILE = '/etc/xconf/certs/crl/Test-CRL-ICA.crl.pem';
 // Allowed base directory for certFile path validation
 const CERT_BASE = '/etc/pki/test-crl/';
 
-// The HTTPS mTLS server; loaded after this module so require() returns the
-// already-created export (no circular-dependency issue at runtime).
+// The HTTPS mTLS server module that loaded this file. This is a circular
+// require (crl-mtls-server -> crl-control -> crl-mtls-server), but it is safe
+// because crl-mtls-server assigns its exports before requiring crl-control.
 const crlMtlsServer = require('./crl-mtls-server');
 
 // ─── Busy flag ────────────────────────────────────────────────────────────────
@@ -67,14 +75,20 @@ let busy = false;
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Validate that certFile is a normalised path within CERT_BASE.
- * Returns true if safe, false if the path escapes the allowed directory.
+ * Validate that certFile is a real, regular file within CERT_BASE.
+ * Rejects symlinks and any path whose resolved real path escapes CERT_BASE,
+ * so a symlink planted under the PKI dir cannot redirect openssl elsewhere.
+ * Returns true if safe, false otherwise.
  */
 function isAllowedCertPath(certFile) {
   if (typeof certFile !== 'string' || certFile.length === 0 || certFile.includes('\0')) return false;
+  if (!path.isAbsolute(certFile)) return false;
   try {
-    const resolved = path.resolve(certFile);
-    return resolved.startsWith(CERT_BASE);
+    if (fs.lstatSync(certFile).isSymbolicLink()) return false;
+    const real = fs.realpathSync(certFile);
+    const base = fs.realpathSync(CERT_BASE);
+    const basePrefix = base.endsWith(path.sep) ? base : base + path.sep;
+    return real.startsWith(basePrefix) && fs.statSync(real).isFile();
   } catch {
     return false;
   }
@@ -92,7 +106,7 @@ function generateCrl() {
     '-out',    CRL_FILE,
     '-crldays', '365',
     '-batch',
-  ], { stdio: 'pipe' });
+  ], { stdio: 'pipe', timeout: OPENSSL_TIMEOUT_MS, maxBuffer: OPENSSL_MAXBUFFER });
 }
 
 /**
@@ -109,7 +123,19 @@ function reloadServerContext() {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', chunk => { body += chunk; });
+    let size = 0;
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => {
+      size += Buffer.byteLength(chunk);
+      if (size > MAX_BODY_BYTES) {
+        const err = new Error('request body too large');
+        err.code = 'PAYLOAD_TOO_LARGE';
+        req.destroy();
+        reject(err);
+        return;
+      }
+      body += chunk;
+    });
     req.on('end',  ()    => resolve(body));
     req.on('error', reject);
   });
@@ -156,7 +182,7 @@ const server = http.createServer(async (req, res) => {
         '-revoke',  certFile,
         '-crl_reason', 'keyCompromise',
         '-batch',
-      ], { stdio: 'pipe' });
+      ], { stdio: 'pipe', timeout: OPENSSL_TIMEOUT_MS, maxBuffer: OPENSSL_MAXBUFFER });
 
       // Regenerate CRL to include the newly revoked entry
       generateCrl();
@@ -166,7 +192,11 @@ const server = http.createServer(async (req, res) => {
       jsonOk(res, { status: 'revoked' });
     } catch (err) {
       console.error('[crl-control] /crl/revoke error:', err.message);
-      jsonErr(res, 500, 'revoke failed');
+      if (err && err.code === 'PAYLOAD_TOO_LARGE') {
+        jsonErr(res, 413, 'payload too large');
+      } else {
+        jsonErr(res, 500, 'revoke failed');
+      }
     } finally {
       busy = false;
     }
