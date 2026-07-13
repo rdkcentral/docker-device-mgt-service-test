@@ -153,7 +153,7 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     # ── 2. Generate cross-signed PKI (incl. XS CRLs + expired bridge) ────────
     # P12 bundles -> shared volume for native-platform. The generator also
     # produces the empty XS CRLs and the truly-expired bridge, and writes
-    # NewRoot.pem last as the readiness sentinel.
+    # client-expxs.p12 last (after NewRoot.pem) as the readiness sentinel.
     CERT_DIR=/etc/pki/test-xs \
     OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
     XS_EXPIRY=1 \
