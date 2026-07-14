@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y vim curl wget nodejs npm openssl
 
 # Clone and manually install certificate scripts
 WORKDIR /opt
-RUN git clone https://github.com/rdkcentral/rdk-cert-config.git
+RUN git clone -b 1.0.6 https://github.com/rdkcentral/rdk-cert-config.git
 RUN mkdir -p /usr/share/cert-scripts && \
     cp /opt/rdk-cert-config/test/cert-scripts/*.sh /usr/share/cert-scripts/ && \
     chmod +x /usr/share/cert-scripts/*.sh && \
