@@ -21,7 +21,7 @@
  * CRL Control Server (L3)
  *
  * Plain HTTP server on port 50062 — no TLS is used because this endpoint only
- * carries test-control traffic (revoke/reset). Note: compose.yaml publishes
+ * carries test-control traffic (revoke). Note: compose.yaml publishes
  * 50062 to the host for local debugging, so do not rely on network isolation
  * as a security boundary; the path-validation checks below are what protect it.
  *
