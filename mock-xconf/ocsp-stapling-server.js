@@ -26,7 +26,7 @@
  *
  * On each new TLS connection that requests OCSP stapling (RFC 6066
  * status_request), the server:
- *   1. Queries the openssl ocsp daemon at http://mockxconf:50063
+ *   1. Queries the openssl ocsp daemon at http://127.0.0.1:50063 (from within the container)
  *   2. Returns the DER-encoded OCSP response, stapling it into the handshake
  *
  * The OCSP response is cached for REFRESH_INTERVAL_MS and refreshed

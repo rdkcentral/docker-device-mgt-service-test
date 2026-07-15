@@ -95,7 +95,7 @@ if (fs.existsSync(NEWROOT)) {
 /**
  * Build the current TLS options object by reading cert/key/CRL files from
  * disk.  Called once at start-up and again by crl-control.js via
- * setSecureContext() after every revocation or reset operation.
+ * setSecureContext() after every revocation operation.
  *
  * @returns {object}  Options suitable for https.createServer() or
  *                    server.setSecureContext().
