@@ -75,6 +75,10 @@ if [ "$ENABLE_CRL_L3" = "true" ]; then
 	## OCSP stapling infrastructure
 	## openssl ocsp daemon (port 50063) must start before ocsp-stapling-server.js
 	## so the stapling server can warm its cache during listen().
+	## Note: the responder always binds 0.0.0.0 — OpenSSL 3.0 `ocsp` has no
+	## responder bind-address option (`-host` applies to client mode only). 50063
+	## is not published to the host (see compose.yaml), so it stays internal to
+	## the Docker network, and it only serves read-only signed OCSP responses.
 	if [ -d /etc/xconf/certs/ocsp ] && \
 	   [ -f /etc/xconf/certs/ocsp/Test-CRL-ICA.pem ] && \
 	   [ -f /etc/xconf/certs/ocsp/ocsp-ca-chain.pem ] && \

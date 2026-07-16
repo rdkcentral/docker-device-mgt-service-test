@@ -253,9 +253,19 @@ ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
 if [ "${ENABLE_CRL_L3}" = "true" ]; then
     echo "[certs] [CRL-L3] Waiting for CRL client cert from mock-xconf..."
 
+    # Bounded wait so a missing/failed export from mock-xconf fails fast in CI
+    # instead of hanging the container forever. Override with CRL_L3_WAIT_TIMEOUT_SEC.
+    CRL_L3_WAIT_TIMEOUT_SEC="${CRL_L3_WAIT_TIMEOUT_SEC:-120}"
+
     # ── Wait for CRL client cert ──────────────────────────────────────────────
+    waited=0
     while [ ! -f "${SHARED_CERTS_DIR}/crl-client/crl-client.p12" ]; do
+        if [ "${waited}" -ge "${CRL_L3_WAIT_TIMEOUT_SEC}" ]; then
+            echo "[certs] [CRL-L3] ERROR: Timed out after ${CRL_L3_WAIT_TIMEOUT_SEC}s waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12" >&2
+            exit 1
+        fi
         sleep 1
+        waited=$((waited + 1))
         echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12..."
     done
 
@@ -279,8 +289,14 @@ if [ "${ENABLE_CRL_L3}" = "true" ]; then
     # waiting on it can race and copy the valid v1. Gate on NewRoot.pem so the
     # expired-bridge rewrite is guaranteed complete.
     echo "[certs] [CRL-L3] Waiting for xsign P12 bundles from mock-xconf..."
+    waited=0
     while [ ! -f "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" ]; do
+        if [ "${waited}" -ge "${CRL_L3_WAIT_TIMEOUT_SEC}" ]; then
+            echo "[certs] [CRL-L3] ERROR: Timed out after ${CRL_L3_WAIT_TIMEOUT_SEC}s waiting for ${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" >&2
+            exit 1
+        fi
         sleep 1
+        waited=$((waited + 1))
         echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/NewRoot.pem..."
     done
 
