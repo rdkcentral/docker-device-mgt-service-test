@@ -60,4 +60,7 @@ See the [Configuration Reference](configuration.md) for all toggles.
 - [Configuration Reference](configuration.md)
 - [PKCS#11 / SoftHSM](pkcs11.md)
 - [xPKI Certifier Service](xpki-certifier.md)
+- [CRL mTLS and Live Revocation](crl-mtls.md)
+- [Cross-Signed PKI](cross-signed-pki.md)
+- [OCSP Stapling](ocsp-stapling.md)
 - [Troubleshooting](troubleshooting.md)
