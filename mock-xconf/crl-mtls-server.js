@@ -119,9 +119,16 @@ function buildTlsOptions() {
     }
   }
 
+  // Send the full server cert chain (leaf + ICA) so clients can verify
+  // the server without needing Test-CRL-ICA pre-installed.
+  const certChain = Buffer.concat([
+    fs.readFileSync(SERVER_CERT),
+    fs.readFileSync(CRL_ICA),
+  ]);
+
   return {
     key:               fs.readFileSync(SERVER_KEY),
-    cert:              fs.readFileSync(SERVER_CERT),
+    cert:              certChain,
     ca:                caChunks,
     crl:               crlChunks,
     requestCert:       true,

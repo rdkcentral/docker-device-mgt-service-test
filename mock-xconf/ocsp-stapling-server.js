@@ -174,10 +174,16 @@ async function refreshCache() {
 
 // ─── HTTPS server ─────────────────────────────────────────────────────────────
 
+// Send the full server cert chain (leaf + ICA) so clients can verify
+// the server without needing Test-CRL-ICA pre-installed.
+const serverCertChain = Buffer.concat([
+  fs.readFileSync(SERVER_CERT),
+  fs.readFileSync(ICA_CERT),
+]);
+
 const tlsOptions = {
   key:  fs.readFileSync(SERVER_KEY),
-  cert: fs.readFileSync(SERVER_CERT),
-  ca:   [fs.readFileSync(ICA_CERT), fs.readFileSync(ROOT_CERT)],
+  cert: serverCertChain,
   // One-way TLS: do NOT request a client cert on this server.
   // The purpose is to test OCSP stapling (server → client direction), not mTLS.
   requestCert:        false,
