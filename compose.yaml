@@ -21,6 +21,10 @@ services:
       # 50063 is queried from 127.0.0.1 inside the container, and 50064 is reached
       # container-to-container over the Docker network, so neither is published to
       # the host. They remain EXPOSEd in the Dockerfile for documentation.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
@@ -37,10 +41,16 @@ services:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    cap_drop:
+      - ALL
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+      - DAC_OVERRIDE
+      - FOWNER
+      - KILL
     security_opt:
+      - no-new-privileges:true
       - seccomp=unconfined
       - apparmor=unconfined 
     environment:
@@ -54,6 +64,10 @@ services:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    cap_drop:
+      - ALL
     cap_add:
-      - NET_ADMIN      
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
       
