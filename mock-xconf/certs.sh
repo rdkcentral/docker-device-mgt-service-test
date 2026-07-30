@@ -131,4 +131,35 @@ if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS certificate trust flow established"
 fi
 
+# ─── CRL mTLS L3 Test PKI ────────────────────────────────────────────────────
+ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
+if [ "${ENABLE_CRL_L3}" = "true" ]; then
+    echo "[certs] [CRL-L3] Starting L3 PKI generation..."
+
+    # Ensure client cert output directories exist.  generate_crl_test_certs.sh
+    # writes into CLIENT_OUT_DIR but does not create it itself.
+    mkdir -p "${SHARED_CERTS_DIR}/crl-client" "${SHARED_CERTS_DIR}/xs-client"
+
+    # ── 1. Generate CRL + OCSP PKI ───────────────────────────────────────────
+    # Server certs -> /etc/xconf/certs/crl and /etc/xconf/certs/ocsp
+    # Client certs -> shared volume for native-platform
+    CERT_DIR=/etc/pki/test-crl \
+    OUT_DIR=/etc/xconf/certs/crl \
+    SERVER_CN=mockxconf \
+    CLIENT_OUT_DIR="${SHARED_CERTS_DIR}/crl-client" \
+    OCSP_OUT_DIR=/etc/xconf/certs/ocsp \
+    bash /etc/pki/scripts/generate_crl_test_certs.sh
+
+    # ── 2. Generate cross-signed PKI (incl. XS CRLs + expired bridge) ────────
+    # P12 bundles -> shared volume for native-platform. The generator also
+    # produces the empty XS CRLs and the truly-expired bridge. native-platform
+    # waits on xs-client/NewRoot.pem as the readiness sentinel before copying.
+    CERT_DIR=/etc/pki/test-xs \
+    OUT_DIR="${SHARED_CERTS_DIR}/xs-client" \
+    XS_EXPIRY=1 \
+    bash /etc/pki/scripts/generate_cross_signed_test_certs.sh
+
+    echo "[certs] [CRL-L3] All L3 PKI generation complete"
+fi
+
 exit 0
