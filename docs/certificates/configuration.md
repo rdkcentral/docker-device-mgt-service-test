@@ -13,6 +13,8 @@ files that govern the certificate subsystem. Values are drawn from
 | -------- | ------- | ---------- | ------ |
 | `ENABLE_MTLS` | `false` | both containers | Enable client-cert generation and the bidirectional mTLS handshake. Set to `true` in `compose.yaml`. |
 | `ENABLE_PKCS11` | `false` | native-platform | Route the client key through SoftHSM / PKCS#11. Only meaningful when `ENABLE_MTLS=true`. |
+| `ENABLE_CRL_L3` | `false` | both containers | Generate the CRL / cross-signed / OCSP PKI, start the [CRL mTLS](crl-mtls.md), [cross-signed](cross-signed-pki.md), and [OCSP stapling](ocsp-stapling.md) servers, and make `native-platform` pick up and trust those client assets. Set to `true` in `compose.yaml`. |
+| `CRL_L3_WAIT_TIMEOUT_SEC` | `120` | native-platform | Bounded wait for the `ENABLE_CRL_L3` shared-volume assets; a missing export fails fast instead of hanging. |
 | `MOCKXCONF_HOST` | `mockxconf` | native-platform | Server hostname used for the DNS gate before importing the server CA. |
 | `XPKI_ENABLE_REQUEST_LOG` | `true` | xpki-certifier | Capture request log (ring buffer). |
 | `XPKI_MAX_LOG_ENTRIES` | `1000` | xpki-certifier | Cap on retained request-log entries. |
@@ -29,6 +31,15 @@ one is the xPKI certifier:
 | 50055 | xPKI certifier | **no** (by design) | CSR signing / renewal |
 | 50050–50054, 50056–50060 | other mock-xconf endpoints | per service | non-cert mock services |
 | 9090 | native-platform | — | device-side endpoint |
+
+When `ENABLE_CRL_L3=true`, `mock-xconf` also runs:
+
+| Port | Service | Published to host? | mTLS |
+| ---- | ------- | ------------------ | ---- |
+| 50061 | [CRL mTLS server](crl-mtls.md) (`crl-mtls-server.js`) | Yes | **yes** |
+| 50062 | [CRL control endpoint](crl-mtls.md) (`crl-control.js`) | Yes — `127.0.0.1` only | no (HTTP) |
+| 50063 | [OCSP responder](ocsp-stapling.md) (`openssl ocsp`) | No — internal, IPv4-only | — |
+| 50064 | [OCSP stapling server](ocsp-stapling.md) (`ocsp-stapling-server.js`) | No — container-to-container | one-way |
 
 ## Certificate paths
 

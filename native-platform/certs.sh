@@ -245,4 +245,88 @@ else
     echo "[certs] mTLS disabled - skipping certificate operations"
 fi
 
+# ─── RDK-61158: CRL mTLS L3 — pick up CRL and xsign client certs ─────────────
+# Gated on ENABLE_CRL_L3=true.  Waits for mock-xconf to export certs to the
+# shared volume, then copies them to local directories and updates the system
+# CA trust store so that curl can verify the CRL mTLS server certificate.
+ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
+if [ "${ENABLE_CRL_L3}" = "true" ]; then
+    echo "[certs] [CRL-L3] Waiting for CRL client cert from mock-xconf..."
+
+    # Bounded wait so a missing/failed export from mock-xconf fails fast in CI
+    # instead of hanging the container forever. Override with CRL_L3_WAIT_TIMEOUT_SEC.
+    CRL_L3_WAIT_TIMEOUT_SEC="${CRL_L3_WAIT_TIMEOUT_SEC:-120}"
+
+    # ── Wait for CRL client cert ──────────────────────────────────────────────
+    waited=0
+    while [ ! -f "${SHARED_CERTS_DIR}/crl-client/crl-client.p12" ]; do
+        if [ "${waited}" -ge "${CRL_L3_WAIT_TIMEOUT_SEC}" ]; then
+            echo "[certs] [CRL-L3] ERROR: Timed out after ${CRL_L3_WAIT_TIMEOUT_SEC}s waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12" >&2
+            exit 1
+        fi
+        sleep 1
+        waited=$((waited + 1))
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/crl-client/crl-client.p12..."
+    done
+
+    mkdir -p /opt/certs/crl
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.pem"    /opt/certs/crl/crl-client.pem
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.key"    /opt/certs/crl/crl-client.key
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-client.p12"    /opt/certs/crl/crl-client.p12
+    cp "${SHARED_CERTS_DIR}/crl-client/crl-ica-chain.pem" /opt/certs/crl/crl-ica-chain.pem
+    # Private-key-bearing artifacts (.key and .p12) get 600; public PEM/chain get 644.
+    chmod 600 /opt/certs/crl/crl-client.key \
+              /opt/certs/crl/crl-client.p12
+    chmod 644 /opt/certs/crl/crl-client.pem \
+              /opt/certs/crl/crl-ica-chain.pem
+    echo "[certs] [CRL-L3] CRL client cert assets copied to /opt/certs/crl/"
+
+    # ── Wait for xsign P12 bundles ────────────────────────────────────────────
+    # NewRoot.pem is written LAST and ONLY by generate_cross_signed_test_certs.sh,
+    # in its post-processing section, after it re-bundles client-expxs.p12 with
+    # the truly-expired bridge. client-expxs.p12 itself is written twice (once
+    # with the still-valid 1-day bridge, then again with the expired bridge), so
+    # waiting on it can race and copy the valid v1. Gate on NewRoot.pem so the
+    # expired-bridge rewrite is guaranteed complete.
+    echo "[certs] [CRL-L3] Waiting for xsign P12 bundles from mock-xconf..."
+    waited=0
+    while [ ! -f "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" ]; do
+        if [ "${waited}" -ge "${CRL_L3_WAIT_TIMEOUT_SEC}" ]; then
+            echo "[certs] [CRL-L3] ERROR: Timed out after ${CRL_L3_WAIT_TIMEOUT_SEC}s waiting for ${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" >&2
+            exit 1
+        fi
+        sleep 1
+        waited=$((waited + 1))
+        echo "[certs] [CRL-L3] Waiting for ${SHARED_CERTS_DIR}/xs-client/NewRoot.pem..."
+    done
+
+    mkdir -p /opt/certs/xs
+    cp "${SHARED_CERTS_DIR}/xs-client/client-xsign.p12" /opt/certs/xs/client-xsign.p12
+    cp "${SHARED_CERTS_DIR}/xs-client/client-old.p12"   /opt/certs/xs/client-old.p12
+    cp "${SHARED_CERTS_DIR}/xs-client/client-expxs.p12" /opt/certs/xs/client-expxs.p12
+    if [ -f "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem" ]; then
+        cp "${SHARED_CERTS_DIR}/xs-client/NewRoot.pem"  /opt/certs/xs/NewRoot.pem
+        chmod 644 /opt/certs/xs/NewRoot.pem
+    fi
+    # XS client bundles contain private keys -> restrict to 600.
+    chmod 600 /opt/certs/xs/client-xsign.p12 \
+              /opt/certs/xs/client-old.p12 \
+              /opt/certs/xs/client-expxs.p12
+    echo "[certs] [CRL-L3] xsign P12 bundles copied to /opt/certs/xs/"
+
+    # ── Install CRL and XS root CAs into system trust store ──────────────────
+    cp "${SHARED_CERTS_DIR}/crl-client/Test-CRL-Root.pem" "${SYSTEM_TRUST_STORE}/test-crl-root.pem"
+    chmod 644 "${SYSTEM_TRUST_STORE}/test-crl-root.pem"
+    grep -qxF "test-crl-root.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "test-crl-root.pem" >> /etc/ca-certificates.conf
+
+    cp /opt/certs/xs/NewRoot.pem "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
+    chmod 644 "${SYSTEM_TRUST_STORE}/test-xs-newroot.pem"
+    grep -qxF "test-xs-newroot.pem" /etc/ca-certificates.conf 2>/dev/null || \
+        echo "test-xs-newroot.pem" >> /etc/ca-certificates.conf
+
+    /usr/sbin/update-ca-certificates --fresh
+    echo "[certs] [CRL-L3] Test-CRL-Root and Test-XS-NewRoot installed in system trust store"
+fi
+
 exit 0

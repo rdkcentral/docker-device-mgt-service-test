@@ -20,6 +20,9 @@ and covers the full cross-container mTLS/PKI flow:
 - [Configuration Reference](certificates/configuration.md)
 - [PKCS#11 / SoftHSM](certificates/pkcs11.md)
 - [xPKI Certifier Service](certificates/xpki-certifier.md)
+- [CRL mTLS and Live Revocation](certificates/crl-mtls.md)
+- [Cross-Signed PKI](certificates/cross-signed-pki.md)
+- [OCSP Stapling](certificates/ocsp-stapling.md)
 - [Troubleshooting](certificates/troubleshooting.md)
 
 > **Scope note.** This documentation set describes the certificate subsystem as
