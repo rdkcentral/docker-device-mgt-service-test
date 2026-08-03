@@ -15,10 +15,21 @@ services:
       - "50058:50058"
       - "50059:50059"  # Crash metadata endpoint
       - "50060:50060"  # S3 presigned URL endpoint
+      - "50061:50061"  # CRL mTLS server
+      - "127.0.0.1:50062:50062"  # CRL control endpoint (localhost-only)
+      # 50063 (OCSP responder) and 50064 (OCSP stapling server) are internal-only:
+      # 50063 is queried from 127.0.0.1 inside the container, and 50064 is reached
+      # container-to-container over the Docker network, so neither is published to
+      # the host. They remain EXPOSEd in the Dockerfile for documentation.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
     environment:
       - ENABLE_MTLS=true
+      - ENABLE_CRL_L3=true
 
 
   l2-container:
@@ -30,14 +41,21 @@ services:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    cap_drop:
+      - ALL
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+      - DAC_OVERRIDE
+      - FOWNER
+      - KILL
     security_opt:
+      - no-new-privileges:true
       - seccomp=unconfined
       - apparmor=unconfined 
     environment:
       - ENABLE_MTLS=true    
+      - ENABLE_CRL_L3=true
   
   nmap-container:
     image: "ghcr.io/rdkcentral/docker-device-mgt-service-test/native-platform:latest"
@@ -46,6 +64,10 @@ services:
       - mock-xconf
     volumes:
       - ../:/mnt/L2_CONTAINER_SHARED_VOLUME
+    cap_drop:
+      - ALL
     cap_add:
-      - NET_ADMIN      
+      - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
       

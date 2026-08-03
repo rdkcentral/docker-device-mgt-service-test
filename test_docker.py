@@ -9,8 +9,25 @@ client = docker.DockerClient(base_url="unix:///var/run/docker.sock")
 CONTAINERS = ["mockxconf", "native-platform"]
 
 # Define expected open ports for mockxconf only (since you want IPv6 check for mockxconf)
-# RDK-61060: Added port 50055 for xpki-certifier service
-MOCKXCONF_EXPECTED_PORTS = [50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059, 50060]  # Example IPv6 ports for mockxconf
+# RDK-61060: Added port 50055 for xpki-certifier service.
+#
+# Always-on mock services (present regardless of ENABLE_MTLS / ENABLE_CRL_L3):
+MOCKXCONF_BASE_PORTS = [50050, 50051, 50052, 50053, 50054, 50055, 50056, 50057, 50058, 50059, 50060]
+
+# RDK-61158: L3 (CRL mTLS + cross-signed) services. These only start when the
+# container is run with ENABLE_CRL_L3=true (see mock-xconf/entrypoint.sh), so
+# they are asserted only in that case. 50061 (CRL mTLS), 50062 (CRL control),
+# 50064 (OCSP stapling, Node dual-stack).
+# 50063 (openssl OCSP responder) is intentionally NOT listed: the openssl
+# responder binds IPv4-only, so it never appears in /proc/net/tcp6, and it is an
+# internal-only dependency reached solely by the 50064 stapling server.
+MOCKXCONF_L3_PORTS = [50061, 50062, 50064]
+
+# Node.js process counts (see mock-xconf/entrypoint.sh): 9 always-on mock
+# servers; the L3 block adds 2 more (crl-mtls-server.js + ocsp-stapling-server.js)
+# when ENABLE_CRL_L3=true.
+MOCKXCONF_BASE_NODE_COUNT = 9
+MOCKXCONF_L3_NODE_COUNT = 2
 
 # Define expected files in each container
 EXPECTED_FILES = {
@@ -24,6 +41,15 @@ def container(request):
     container = client.containers.get(request.param)  # Fetch running container
     yield container  # Provide container for tests
 
+def _crl_l3_enabled(container):
+    """Return True if the container was started with ENABLE_CRL_L3=true.
+
+    The L3 CRL mTLS / OCSP servers (and their ports) are only started in that
+    case, so the port and process-count expectations depend on it.
+    """
+    env = container.attrs.get("Config", {}).get("Env", []) or []
+    return "ENABLE_CRL_L3=true" in env
+
 def test_container_running(container):
     """Check if the container is running."""
     container.reload()  # Ensure we have the latest status
@@ -36,7 +62,11 @@ def test_ports_are_open_ipv6_mockxconf(container):
 
     print(f"Checking IPv6 ports for container: {container.name}")
 
-    for port in MOCKXCONF_EXPECTED_PORTS:
+    expected_ports = list(MOCKXCONF_BASE_PORTS)
+    if _crl_l3_enabled(container):
+        expected_ports += MOCKXCONF_L3_PORTS
+
+    for port in expected_ports:
         hex_port = format(port, '04x').upper()  # Convert port number to uppercase hex (e.g., 50050 -> 'C382')
         exit_code, output = container.exec_run("cat /proc/net/tcp6")
 
@@ -47,7 +77,7 @@ def test_ports_are_open_ipv6_mockxconf(container):
         print(f"✅ Port {port} is open in {container.name}")
 
 def test_node_processes_running_mockxconf(container):
-    """Ensure exactly 9 Node.js processes are running inside mockxconf."""
+    """Ensure the expected number of Node.js processes are running inside mockxconf."""
     if container.name != "mockxconf":
         pytest.skip(f"Skipping Node.js process check for {container.name}")
 
@@ -61,8 +91,12 @@ def test_node_processes_running_mockxconf(container):
     node_process_count = int(output.strip())  # Convert output to integer
     print(f"Found {node_process_count} Node.js processes running in {container.name}")
 
-    assert node_process_count == 9, f"Expected 9 Node.js processes, but found {node_process_count}!"
-    print(f"✅ All 9 Node.js processes are running in {container.name}")
+    expected_count = MOCKXCONF_BASE_NODE_COUNT
+    if _crl_l3_enabled(container):
+        expected_count += MOCKXCONF_L3_NODE_COUNT
+
+    assert node_process_count == expected_count, f"Expected {expected_count} Node.js processes, but found {node_process_count}!"
+    print(f"✅ All {expected_count} Node.js processes are running in {container.name}")
 
 def test_files_exist(container):
     """Verify that expected files exist in the respective container."""

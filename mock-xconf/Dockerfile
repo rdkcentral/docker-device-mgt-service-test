@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y vim curl wget nodejs npm openssl
 
 # Clone and manually install certificate scripts
 WORKDIR /opt
-RUN git clone https://github.com/rdkcentral/rdk-cert-config.git
+RUN git clone -b 1.0.6 https://github.com/rdkcentral/rdk-cert-config.git
 RUN mkdir -p /usr/share/cert-scripts && \
     cp /opt/rdk-cert-config/test/cert-scripts/*.sh /usr/share/cert-scripts/ && \
     chmod +x /usr/share/cert-scripts/*.sh && \
@@ -97,6 +97,16 @@ RUN chmod +x /usr/local/bin/crashUpload.js
 COPY xpki-certifier.js /usr/local/bin/xpki-certifier.js
 RUN chmod +x /usr/local/bin/xpki-certifier.js
 
+# CRL mTLS server and CRL control server
+COPY crl-mtls-server.js /usr/local/bin/crl-mtls-server.js
+RUN chmod +x /usr/local/bin/crl-mtls-server.js
+COPY crl-control.js /usr/local/bin/crl-control.js
+RUN chmod +x /usr/local/bin/crl-control.js
+
+# OCSP stapling server
+COPY ocsp-stapling-server.js /usr/local/bin/ocsp-stapling-server.js
+RUN chmod +x /usr/local/bin/ocsp-stapling-server.js
+
 CMD ["/usr/local/bin/entrypoint.sh"]
 
 EXPOSE 50050
@@ -110,4 +120,8 @@ EXPOSE 50057
 EXPOSE 50058
 EXPOSE 50059
 EXPOSE 50060
+EXPOSE 50061
+EXPOSE 50062
+EXPOSE 50063
+EXPOSE 50064
 
