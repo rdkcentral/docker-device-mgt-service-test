@@ -39,33 +39,33 @@ let savedrequest_json={};
 /**
  * Function to read JSON file and return the data
  */
-function readJsonFile(count) {
+function readJsonFile(count, prefix = '') {
   if(count == 0){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
   }
   else if(count == 1){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalid-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-invalid-response.json`);
   }
   else if(count == 2){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-invalidpci-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-invalidpci-response.json`);
   }
   else if(count == 3){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-delaydwnl-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-delaydwnl-response.json`);
   }
   else if(count == 4){
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-reboottrue-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-reboottrue-response.json`);
   }
   else if(count == 5){
-    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-response.json`);
   }
   else if(count == 6){
-    var filePath = path.join('/etc/xconf', 'xconf-peripheralcdl-404response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-404response.json`);
   }
   else if(count == 7){
-    var filePath = path.join('/etc/xconf', 'xconf-certbundle-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-certbundle-response.json`);
   }
   else{
-    var filePath = path.join('/etc/xconf', 'xconf-cdl-response.json');
+    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
   }
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
@@ -77,7 +77,7 @@ function readJsonFile(count) {
   }
 }  
 
-function handleFirmwareData(req, res, queryObject, file) {
+function handleFirmwareData(req, res, queryObject, file, prefix = '') {
   let data = '';
   req.on('data', function(chunk) {
     data += chunk;
@@ -91,13 +91,31 @@ function handleFirmwareData(req, res, queryObject, file) {
   }
 
   res.writeHead(200, {'Content-Type': 'application/json'});
-  res.end(JSON.stringify(readJsonFile(file)));
+  res.end(JSON.stringify(readJsonFile(file, prefix)));
   //console.log('Data received After stringfy: ' + JSON.stringify(readJsonFile(file)));
   return;
 }
 
 function handleFirmwareFileDownload(req, res, queryObject, index) {
-  const fileName = req.url.split('/').pop();
+  const prefix = '/getfirmwarefile/';
+
+  if (!req.url.startsWith(prefix)) {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({ error: 'Invalid firmware file request path' }));
+    return;
+  }
+
+  const relativePath = decodeURIComponent(req.url.slice(prefix.length));
+
+  // Basic safety check against path traversal
+  if (!relativePath || relativePath.includes('..')) {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({ error: 'Invalid file path' }));
+    return;
+  }
+
+  const fileName = relativePath;
+
   //const filePath = path.join(__dirname, fileName);
   const filePath = path.join('/etc/xconf', fileName);
 
@@ -138,6 +156,30 @@ function requestHandler(req, res) {
   else if (req.method === 'POST') {
     if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,0); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,0,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,1,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidpcifirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,2,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/delaydwnlfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,3,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getreboottruefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,4,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getperipheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,5,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/get404peripheralfirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,6,'DCDN_'); 
+    }
+    else if (req.url.startsWith('/firmwareupdate/DCDN/getcertbundlefirmwaredata')) {
+      return handleFirmwareData(req, res, queryObject,7,'DCDN_'); 
     }
     else if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) {
       return handleFirmwareData(req, res, queryObject,1); 
