@@ -1,1 +1,10 @@
-{"additionalFwVerInfo":"ABCD_PDRI_firmware_test","firmwareDownloadProtocol":"http","firmwareFilename":"ABCD_firmware_test.bin","firmwareLocation":"https://mockxconf:50052/getfirmwarefile/","firmwareVersion":"ABCD_firmware_test","rebootImmediately":true}
+{
+  "additionalFwVerInfo": "ABCD_PDRI_firmware_test",
+  "additionalFwVerInfo_URL": "https://mockxconf:50052/getfirmwarefile/DCDN/ABCD_PDRI_firmware_test.bin",
+  "firmwareDownloadProtocol": "http",
+  "firmwareFilename": "ABCD_firmware_test.bin",
+  "firmwareVersion": "ABCD_firmware_test",
+  "firmware_URL": "https://mockxconf:50052/getfirmwarefile/DCDN/ABCD_firmware_test.bin",
+  "mandatoryUpdate": false,
+  "rebootImmediately": true
+}

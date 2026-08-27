@@ -1,1 +1,8 @@
-{"additionalFwVerInfo":"ABCD_PDRI_fir_test","firmwareDownloadProtocol":"http","firmwareFilename":"ABCD_fir_test.bin","firmwareLocation":"https://mockxconf:50052/getfirmwarefile/","firmwareVersion":"ABCD_fir_test","rebootImmediately":false,"remCtrlAB11-20":"AB11-20_firmware_51.3.4"}
+{
+  "firmwareDownloadProtocol": "http",
+  "firmwareFilename": "ABCD_peripheral_notfound_test.bin",
+  "firmwareVersion": "ABCD_peripheral_notfound_test",
+  "firmware_URL": "https://mockxconf:50052/getfirmwarefile/DCDN/ABCD_peripheral_notfound_test.bin",
+  "mandatoryUpdate": false,
+  "rebootImmediately": false
+}
