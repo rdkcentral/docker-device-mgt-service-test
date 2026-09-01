@@ -40,33 +40,36 @@ let savedrequest_json={};
  * Function to read JSON file and return the data
  */
 function readJsonFile(count, prefix = '') {
+  const basePath = prefix === 'DCDN_' ? '/etc/xconf/DCDN' : '/etc/xconf';
+  let fileName;
   if(count == 0){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
   }
   else if(count == 1){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-invalid-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-invalid-response.json`);
   }
   else if(count == 2){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-invalidpci-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-invalidpci-response.json`);
   }
   else if(count == 3){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-delaydwnl-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-delaydwnl-response.json`);
   }
   else if(count == 4){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-reboottrue-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-reboottrue-response.json`);
   }
   else if(count == 5){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-response.json`);
   }
   else if(count == 6){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-404response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-404response.json`);
   }
   else if(count == 7){
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-certbundle-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-certbundle-response.json`);
   }
   else{
-    var filePath = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
+    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
   }
+  const filePath = path.join(basePath, fileName);
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
     console.log('Data received1: ' + fileData);
