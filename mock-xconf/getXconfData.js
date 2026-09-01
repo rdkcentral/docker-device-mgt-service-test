@@ -41,45 +41,50 @@ let savedrequest_json={};
  */
 function readJsonFile(count, prefix = '') {
   const basePath = prefix === 'DCDN_' ? '/etc/xconf/DCDN' : '/etc/xconf';
+
   let fileName;
-  if(count == 0){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
+
+  if (count == 0) {
+    fileName = `${prefix}xconf-cdl-response.json`;
   }
-  else if(count == 1){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-invalid-response.json`);
+  else if (count == 1) {
+    fileName = `${prefix}xconf-cdl-invalid-response.json`;
   }
-  else if(count == 2){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-invalidpci-response.json`);
+  else if (count == 2) {
+    fileName = `${prefix}xconf-cdl-invalidpci-response.json`;
   }
-  else if(count == 3){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-delaydwnl-response.json`);
+  else if (count == 3) {
+    fileName = `${prefix}xconf-cdl-delaydwnl-response.json`;
   }
-  else if(count == 4){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-reboottrue-response.json`);
+  else if (count == 4) {
+    fileName = `${prefix}xconf-cdl-reboottrue-response.json`;
   }
-  else if(count == 5){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-response.json`);
+  else if (count == 5) {
+    fileName = `${prefix}xconf-peripheralcdl-response.json`;
   }
-  else if(count == 6){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-peripheralcdl-404response.json`);
+  else if (count == 6) {
+    fileName = `${prefix}xconf-peripheralcdl-404response.json`;
   }
-  else if(count == 7){
-    fileName = path.join('/etc/xconf', `${prefix}xconf-certbundle-response.json`);
+  else if (count == 7) {
+    fileName = `${prefix}xconf-certbundle-response.json`;
   }
-  else{
-    fileName = path.join('/etc/xconf', `${prefix}xconf-cdl-response.json`);
+  else {
+    fileName = `${prefix}xconf-cdl-response.json`;
   }
+
   const filePath = path.join(basePath, fileName);
+
+  console.log(`Reading XConf response file: ${filePath}`);
+
   try {
     const fileData = fs.readFileSync(filePath, 'utf8');
     console.log('Data received1: ' + fileData);
     return JSON.parse(fileData);
   } catch (error) {
-    console.error('Error reading or parsing JSON file:', error);
+    console.error(`Error reading or parsing JSON file ${filePath}:`, error);
     return null;
   }
-}  
-
+}
 function handleFirmwareData(req, res, queryObject, file, prefix = '') {
   let data = '';
   req.on('data', function(chunk) {
