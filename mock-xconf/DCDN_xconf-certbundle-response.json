@@ -1,0 +1,8 @@
+{
+  "firmwareDownloadProtocol": "http",
+  "firmwareFilename": "ABCD_certbundle_test.tgz",
+  "firmwareVersion": "ABCD_certbundle_test",
+  "firmware_URL": "http://mockxconf:50065/getfirmwarefile/DCDN/ABCD_certbundle_test.tgz",
+  "mandatoryUpdate": false,
+  "rebootImmediately": false
+}
