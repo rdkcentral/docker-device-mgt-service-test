@@ -2,7 +2,7 @@
   "firmwareDownloadProtocol": "http",
   "firmwareFilename": "ABCD_peripheral_firmware_test.bin",
   "firmwareVersion": "ABCD_peripheral_firmware_test",
-  "firmware_URL": "https://mockxconf:50052/getfirmwarefile/DCDN/ABCD_peripheral_firmware_test.bin",
+  "firmware_URL": "http://mockxconf:50065/getfirmwarefile/DCDN/ABCD_peripheral_firmware_test.bin",
   "mandatoryUpdate": false,
   "rebootImmediately": false
 }
