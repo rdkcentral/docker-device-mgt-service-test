@@ -20,58 +20,47 @@
 const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
-const url = require('node:url');
+const url = require('node:url'); 
 const { applyMtlsConfig } = require('./server-utils');
 
-// HTTPS options with base configuration
-const options = {
-  key: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem')),
-  cert: fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem')),
-  port: 50052
-};
+const TLS_KEY = fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem'));
+const TLS_CERT = fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem'));
 
-// Apply mTLS settings if enabled 
-applyMtlsConfig(options);
+const MTLS_PORT = 50052;   // existing secure endpoint (unchanged)
+const DCDN_PORT = 50065;   // new DirectCDN endpoint
+
+// mTLS-enabled HTTPS options (legacy + secure paths)
+const mtlsOptions = {
+  key: TLS_KEY,
+  cert: TLS_CERT
+};
+applyMtlsConfig(mtlsOptions);
+
+// DCDN should also be HTTPS + mTLS (same trust behavior)
+const dcdnOptions = {
+  key: TLS_KEY,
+  cert: TLS_CERT
+};
+applyMtlsConfig(dcdnOptions);
 
 let save_request = false;
-let savedrequest_json={};
+let savedrequest_json = {};
 
-/**
- * Function to read JSON file and return the data
- */
+function getResponseFileName(count, prefix = '') {
+  if (count === 0) return `${prefix}xconf-cdl-response.json`;
+  if (count === 1) return `${prefix}xconf-cdl-invalid-response.json`;
+  if (count === 2) return `${prefix}xconf-cdl-invalidpci-response.json`;
+  if (count === 3) return `${prefix}xconf-cdl-delaydwnl-response.json`;
+  if (count === 4) return `${prefix}xconf-cdl-reboottrue-response.json`;
+  if (count === 5) return `${prefix}xconf-peripheralcdl-response.json`;
+  if (count === 6) return `${prefix}xconf-peripheralcdl-404response.json`;
+  if (count === 7) return `${prefix}xconf-certbundle-response.json`;
+  return `${prefix}xconf-cdl-response.json`;
+}
+
 function readJsonFile(count, prefix = '') {
   const basePath = prefix === 'DCDN_' ? '/etc/xconf/DCDN' : '/etc/xconf';
-
-  let fileName;
-
-  if (count == 0) {
-    fileName = `${prefix}xconf-cdl-response.json`;
-  }
-  else if (count == 1) {
-    fileName = `${prefix}xconf-cdl-invalid-response.json`;
-  }
-  else if (count == 2) {
-    fileName = `${prefix}xconf-cdl-invalidpci-response.json`;
-  }
-  else if (count == 3) {
-    fileName = `${prefix}xconf-cdl-delaydwnl-response.json`;
-  }
-  else if (count == 4) {
-    fileName = `${prefix}xconf-cdl-reboottrue-response.json`;
-  }
-  else if (count == 5) {
-    fileName = `${prefix}xconf-peripheralcdl-response.json`;
-  }
-  else if (count == 6) {
-    fileName = `${prefix}xconf-peripheralcdl-404response.json`;
-  }
-  else if (count == 7) {
-    fileName = `${prefix}xconf-certbundle-response.json`;
-  }
-  else {
-    fileName = `${prefix}xconf-cdl-response.json`;
-  }
-
+  const fileName = getResponseFileName(count, prefix);
   const filePath = path.join(basePath, fileName);
 
   console.log(`Reading XConf response file: ${filePath}`);
@@ -81,55 +70,50 @@ function readJsonFile(count, prefix = '') {
     console.log('Data received1: ' + fileData);
     return JSON.parse(fileData);
   } catch (error) {
-    console.error(`Error reading or parsing JSON file ${filePath}:`, error);
+    console.error(`Error reading/parsing JSON file ${filePath}:`, error);
     return null;
   }
 }
+
 function handleFirmwareData(req, res, queryObject, file, prefix = '') {
   let data = '';
-  req.on('data', function(chunk) {
-    data += chunk;
-  });
-  req.on('end', function() {
-    console.log('Data received2: ' + data);
-  });
+  req.on('data', (chunk) => { data += chunk; });
+  req.on('end', () => { console.log('Data received2: ' + data); });
 
   if (save_request) {
     savedrequest_json[new Date().toISOString()] = { ...queryObject };
   }
 
-  res.writeHead(200, {'Content-Type': 'application/json'});
-  res.end(JSON.stringify(readJsonFile(file, prefix)));
-  //console.log('Data received After stringfy: ' + JSON.stringify(readJsonFile(file)));
-  return;
-}
-
-function handleFirmwareFileDownload(req, res, queryObject, index) {
-  const prefix = '/getfirmwarefile/';
-
-  if (!req.url.startsWith(prefix)) {
-    res.writeHead(400, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify({ error: 'Invalid firmware file request path' }));
+  const payload = readJsonFile(file, prefix);
+  if (!payload) {
+    res.writeHead(500, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({ error: 'Failed to read response payload' }));
     return;
   }
 
-  const relativePath = decodeURIComponent(req.url.slice(prefix.length));
+  res.writeHead(200, {'Content-Type': 'application/json'});
+  res.end(JSON.stringify(payload));
+}
 
-  // Basic safety check against path traversal
+function handleFirmwareFileDownload(req, res) {
+  const routePrefix = '/getfirmwarefile/';
+  if (!req.url.startsWith(routePrefix)) {
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({ error: 'Invalid firmware file request path' }));
+    return;
+	}
+
+  const relativePath = decodeURIComponent(req.url.slice(routePrefix.length));
   if (!relativePath || relativePath.includes('..')) {
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({ error: 'Invalid file path' }));
     return;
   }
 
-  const fileName = relativePath;
-
-  //const filePath = path.join(__dirname, fileName);
-  const filePath = path.join('/etc/xconf', fileName);
-
+  const filePath = path.join('/etc/xconf', relativePath);
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      res.writeHead(404);
+      res.writeHead(404, {'Content-Type': 'application/json'});
       res.end(JSON.stringify(err));
       return;
     }
@@ -137,93 +121,66 @@ function handleFirmwareFileDownload(req, res, queryObject, index) {
     res.end(data);
   });
 }
-/**
- * Handles the incoming request and logs the data received
- * @param {http.IncomingMessage} req - The incoming request object
- * @param {http.ServerResponse} res - The server response object
- */
-function requestHandler(req, res) {
+
+/** mTLS server: legacy/non-DCDN routes */
+function secureRequestHandler(req, res) {
   const queryObject = url.parse(req.url, true).query;
-  console.log('Query Object: ' + JSON.stringify(queryObject));
-  console.log('Request received: ' + req.url);
-  console.log('json'+JSON.stringify(savedrequest_json));
-  console.log('Request method: ' + req.method);
+  console.log('[mTLS] Request received:', req.method, req.url);
+
   if (req.method === 'GET') {
-    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,0); 
+    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) return handleFirmwareData(req, res, queryObject, 0);
+    if (req.url.startsWith('/getfirmwarefile')) return handleFirmwareFileDownload(req, res);
+    if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
+      res.writeHead(404); res.end('404 No Content'); return;
     }
-    else if (req.url.startsWith('/getfirmwarefile')) {
-      return handleFirmwareFileDownload(req, res, queryObject,0); 
-    }
-    else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
-      res.writeHead(404);
-      res.end("404 No Content");
-      return;
-    }
-  }
-  else if (req.method === 'POST') {
-    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,0); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,0,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,1,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidpcifirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,2,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/delaydwnlfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,3,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getreboottruefirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,4,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getperipheralfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,5,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/get404peripheralfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,6,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/DCDN/getcertbundlefirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,7,'DCDN_'); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,1); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/getinvalidpcifirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,2); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/delaydwnlfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,3); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/getreboottruefirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,4); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/getperipheralfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,5); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/get404peripheralfirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,6); 
-    }
-    else if (req.url.startsWith('/firmwareupdate/getcertbundlefirmwaredata')) {
-      return handleFirmwareData(req, res, queryObject,7); 
-    }
-    else if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
-      res.writeHead(404);
-      res.end("404 No Content");
-      return;
+  } else if (req.method === 'POST') {
+    if (req.url.startsWith('/firmwareupdate/getfirmwaredata')) return handleFirmwareData(req, res, queryObject, 0);
+    if (req.url.startsWith('/firmwareupdate/getinvalidfirmwaredata')) return handleFirmwareData(req, res, queryObject, 1);
+    if (req.url.startsWith('/firmwareupdate/getinvalidpcifirmwaredata')) return handleFirmwareData(req, res, queryObject, 2);
+    if (req.url.startsWith('/firmwareupdate/delaydwnlfirmwaredata')) return handleFirmwareData(req, res, queryObject, 3);
+    if (req.url.startsWith('/firmwareupdate/getreboottruefirmwaredata')) return handleFirmwareData(req, res, queryObject, 4);
+    if (req.url.startsWith('/firmwareupdate/getperipheralfirmwaredata')) return handleFirmwareData(req, res, queryObject, 5);
+    if (req.url.startsWith('/firmwareupdate/get404peripheralfirmwaredata')) return handleFirmwareData(req, res, queryObject, 6);
+    if (req.url.startsWith('/firmwareupdate/getcertbundlefirmwaredata')) return handleFirmwareData(req, res, queryObject, 7);
+
+    if (req.url.startsWith('/firmwareupdate404/getfirmwaredata')) {
+      res.writeHead(404); res.end('404 No Content'); return;
     }
   }
-  res.writeHead(200);
-  res.end("Server is Up Please check the request....");
+
+  res.writeHead(404);
+  res.end('Not Found');
 }
 
-// Create HTTPS server
-const server = https.createServer(options, requestHandler);
+/** DCDN server: DCDN routes */
+function dcdnRequestHandler(req, res) {
+   const queryObject = url.parse(req.url, true).query;
+  console.log('[DCDN] Request received:', req.method, req.url);
 
-// Start the server
-server.listen(options.port, () => {
-  console.log(`XCONF Mock Server running at https://localhost:${options.port}/`);
+  if (req.method === 'GET') {
+    if (req.url.startsWith('/getfirmwarefile/DCDN/')) return handleFirmwareFileDownload(req, res);
+  } else if (req.method === 'POST') {
+    if (req.url.startsWith('/firmwareupdate/DCDN/getfirmwaredata')) return handleFirmwareData(req, res, queryObject, 0, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidfirmwaredata')) return handleFirmwareData(req, res, queryObject, 1, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidpcifirmwaredata')) return handleFirmwareData(req, res, queryObject, 2, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/delaydwnlfirmwaredata')) return handleFirmwareData(req, res, queryObject, 3, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/getreboottruefirmwaredata')) return handleFirmwareData(req, res, queryObject, 4, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/getperipheralfirmwaredata')) return handleFirmwareData(req, res, queryObject, 5, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/get404peripheralfirmwaredata')) return handleFirmwareData(req, res, queryObject, 6, 'DCDN_');
+    if (req.url.startsWith('/firmwareupdate/DCDN/getcertbundlefirmwaredata')) return handleFirmwareData(req, res, queryObject, 7, 'DCDN_');
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
+}
+
+const mtlsServer = https.createServer(mtlsOptions, secureRequestHandler);
+const dcdnServer = https.createServer(dcdnOptions, dcdnRequestHandler);
+
+mtlsServer.listen(MTLS_PORT, () => {
+  console.log(`XCONF Mock mTLS server running at https://localhost:${MTLS_PORT}/`);
+});
+
+dcdnServer.listen(DCDN_PORT, () => {
+  console.log(`XCONF Mock DirectCDN mTLS server running at https://localhost:${DCDN_PORT}/`);
 });
