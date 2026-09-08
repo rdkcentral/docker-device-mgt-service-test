@@ -62,6 +62,7 @@ COPY firmware_test.bin /etc/xconf/AB11-20_firmware_5103.3.4.tgz
 COPY firmware_test.bin /etc/xconf/DCDN/ABCD_firmware_test.bin
 COPY firmware_test.bin /etc/xconf/DCDN/ABCD_PDRI_firmware_test.bin
 COPY firmware_test.bin /etc/xconf/DCDN/ABCD_peripheral_firmware_test.bin
+COPY firmware_test.bin /etc/xconf/DCDN/ABCD_certbundle_test.tgz
 
 RUN mkdir -p /tmp/RDM
 COPY RDK-RRD-Test_1.0-signed.tar /tmp/RDM 
