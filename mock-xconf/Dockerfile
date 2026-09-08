@@ -54,7 +54,7 @@ COPY xconf-peripheralcdl-response.json /etc/xconf/xconf-peripheralcdl-response.j
 COPY xconf-peripheralcdl-404response.json /etc/xconf/xconf-peripheralcdl-404response.json
 COPY xconf-certbundle-response.json /etc/xconf/xconf-certbundle-response.json
 COPY xconf-rfc-response.json /etc/xconf/xconf-rfc-response.json
-COPY DCDN_xconf_*.json /etc/xconf/DCDN/
+COPY DCDN_xconf-*.json /etc/xconf/DCDN/
 COPY firmware_test.bin /etc/xconf/firmware_test.bin
 COPY firmware_test.bin /etc/xconf/ABCD_firmware_test.bin
 COPY firmware_test.bin /etc/xconf/ABCD_PDRI_firmware_test.bin
