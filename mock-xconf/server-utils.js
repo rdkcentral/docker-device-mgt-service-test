@@ -51,7 +51,23 @@ function applyMtlsConfig(options) {
   return options;
 }
 
+function applyOptionalMtlsConfig(options) {
+  const mtlsEnabled = isMtlsEnabled();
+
+  if (mtlsEnabled && fs.existsSync(CA_CHAIN_PATH)) {
+    options.ca = fs.readFileSync(CA_CHAIN_PATH);
+    options.requestCert = true;
+    options.rejectUnauthorized = false;
+    console.log('Optional mTLS configuration loaded successfully with CA chain');
+  } else if (mtlsEnabled) {
+    console.warn('mTLS is enabled but CA chain file not found in trust store');
+  }
+
+  return options;
+}
+
 module.exports = {
   isMtlsEnabled,
-  applyMtlsConfig
+  applyMtlsConfig,
+  applyOptionalMtlsConfig
 };
