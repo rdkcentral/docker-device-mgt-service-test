@@ -21,7 +21,7 @@ const https = require('node:https');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url'); 
-const { applyMtlsConfig, applyOptionalMtlsConfig, isMtlsEnabled } = require('./server-utils');
+const { applyMtlsConfig } = require('./server-utils');
 
 const TLS_KEY = fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-key.pem'));
 const TLS_CERT = fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-cert.pem'));
@@ -36,12 +36,12 @@ const mtlsOptions = {
 };
 applyMtlsConfig(mtlsOptions);
 
-// DCDN artifact downloads do not provide a client certificate.
+// DCDN should also be HTTPS + mTLS (same trust behavior)
 const dcdnOptions = {
   key: TLS_KEY,
   cert: TLS_CERT
 };
-applyOptionalMtlsConfig(dcdnOptions);
+applyMtlsConfig(dcdnOptions);
 
 let save_request = false;
 let savedrequest_json = {};
@@ -160,11 +160,6 @@ function dcdnRequestHandler(req, res) {
   if (req.method === 'GET') {
     if (req.url.startsWith('/getfirmwarefile/DCDN/')) return handleFirmwareFileDownload(req, res);
   } else if (req.method === 'POST') {
-    if (isMtlsEnabled() && !req.client.authorized) {
-      res.writeHead(403);
-      res.end('Client certificate required');
-      return;
-    }
     if (req.url.startsWith('/firmwareupdate/DCDN/getfirmwaredata')) return handleFirmwareData(req, res, queryObject, 0, 'DCDN_');
     if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidfirmwaredata')) return handleFirmwareData(req, res, queryObject, 1, 'DCDN_');
     if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidpcifirmwaredata')) return handleFirmwareData(req, res, queryObject, 2, 'DCDN_');
