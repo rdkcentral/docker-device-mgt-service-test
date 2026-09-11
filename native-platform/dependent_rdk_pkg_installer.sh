@@ -102,4 +102,13 @@ make && make install
 cd $WORKDIR 
 rm -rf libparodus
 
+cd $WORKDIR
+git clone https://github.com/rurban/safeclib.git
+cd safeclib
+./build-aux/autogen.sh
+./configure
+make && make install
+cd $WORKDIR
+rm -rf safeclib
+
 #rtrouted -f -l DEBUG

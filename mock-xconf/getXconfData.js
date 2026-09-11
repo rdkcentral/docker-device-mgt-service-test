@@ -121,6 +121,7 @@ function handleFirmwareFileDownload(req, res) {
     return;
   }
 
+  const filePath = path.join('/etc/xconf', relativePath);
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404, {'Content-Type': 'application/json'});
