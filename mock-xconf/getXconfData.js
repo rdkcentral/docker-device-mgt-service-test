@@ -97,25 +97,14 @@ function handleFirmwareData(req, res, queryObject, file, prefix = '') {
 
 function handleFirmwareFileDownload(req, res) {
   const routePrefix = '/getfirmwarefile/';
-  const requestPath = new URL(req.url, 'https://mockxconf').pathname;
-  if (!requestPath.startsWith(routePrefix)) {
+  if (!req.url.startsWith(routePrefix)) {
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({ error: 'Invalid firmware file request path' }));
     return;
 	}
 
-  let relativePath;
-  try {
-    relativePath = decodeURIComponent(requestPath.slice(routePrefix.length));
-  } catch (error) {
-    res.writeHead(400, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify({ error: 'Invalid file path' }));
-    return;
-  }
-
-  const basePath = path.resolve('/etc/xconf');
-  const filePath = path.resolve(basePath, relativePath);
-  if (!relativePath || !filePath.startsWith(`${basePath}${path.sep}`)) {
+  const relativePath = decodeURIComponent(req.url.slice(routePrefix.length));
+  if (!relativePath || relativePath.includes('..')) {
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({ error: 'Invalid file path' }));
     return;
@@ -171,7 +160,7 @@ function dcdnRequestHandler(req, res) {
   if (req.method === 'GET') {
     if (req.url.startsWith('/getfirmwarefile/DCDN/')) return handleFirmwareFileDownload(req, res);
   } else if (req.method === 'POST') {
-    if (isMtlsEnabled() && !req.socket.authorized) {
+    if (isMtlsEnabled() && !req.client.authorized) {
       res.writeHead(403);
       res.end('Client certificate required');
       return;
