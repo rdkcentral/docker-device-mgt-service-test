@@ -1,0 +1,116 @@
+name: Release Component
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Type of version bump (major, minor, patch, none)'
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+      component_repo:
+        description: 'Repository name of the component triggering the release'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "187267378+rdkcm-rdke@users.noreply.github.com"
+     
+      - name: Install git-flow and auto-changelog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-flow
+          npm install -g auto-changelog
+
+      - name: Clone the component repo and start release
+        env:
+          COMPONENT_REPO: ${{ github.event.inputs.component_repo }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
+        run: |
+          set -e
+          if [[ ! "$COMPONENT_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
+            echo "[component-release.yml] ERROR: Invalid component_repo format '$COMPONENT_REPO'. Expected 'owner/repo' with alphanumeric, hyphen, dot, or underscore characters."
+            exit 1
+          fi
+          git clone "https://x-access-token:${{ secrets.RDKCM_RDKE }}@github.com/${COMPONENT_REPO}" project
+          cd project
+          git fetch --all
+          git checkout main || git checkout -b main origin/main
+          git checkout develop || git checkout -b develop origin/develop
+
+          echo "[component-release.yml] INFO: Configuring git-flow for the repository"
+          git config gitflow.branch.master main
+          git config gitflow.branch.develop develop
+          git config gitflow.prefix.feature feature/
+          git config gitflow.prefix.bugfix bugfix/
+          git config gitflow.prefix.release release/
+          git config gitflow.prefix.hotfix hotfix/
+          git config gitflow.prefix.support support/
+          git config gitflow.prefix.versiontag ''
+
+          echo "[component-release.yml] INFO: git config completed"
+          TOP_TAG=$(grep -m 1 -oP '^#### \[\K[^\]]+' CHANGELOG.md || true)
+          if [[ -z "$TOP_TAG" ]]; then
+            echo "[component-release.yml] ERROR: No version found in CHANGELOG.md!"
+            exit 1
+          fi
+          if [[ ! "$TOP_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "[component-release.yml] ERROR: Invalid version format in CHANGELOG.md: $TOP_TAG. Expected format: major.minor.patch"
+            exit 1
+          fi
+          IFS='.' read -r major minor patch <<< "$TOP_TAG"
+          if [[ "$VERSION_TYPE" == "major" ]]; then
+            major=$((major + 1)); minor=0; patch=0
+          elif [[ "$VERSION_TYPE" == "minor" ]]; then
+            minor=$((minor + 1)); patch=0
+          elif [[ "$VERSION_TYPE" == "patch" ]]; then
+            patch=$((patch + 1))
+          fi
+          RELEASE_VERSION="$major.$minor.$patch"
+          echo "[component-release.yml] INFO: Using calculated version: $RELEASE_VERSION"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+          if git rev-parse "refs/tags/$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "[component-release.yml] INFO: Tag $RELEASE_VERSION already exists. Skipping release."
+            echo "SKIP_RELEASE=true" >> $GITHUB_ENV
+          else
+            git flow release start $RELEASE_VERSION
+            auto-changelog -v $RELEASE_VERSION
+            git add CHANGELOG.md
+            git commit -m "$RELEASE_VERSION release changelog updates"
+            git flow release publish
+          fi
+
+      - name: Finish release and push
+        if: env.SKIP_RELEASE != 'true'
+        run: |
+          set -e
+          cd project
+          git flow release finish -m "$RELEASE_VERSION release" $RELEASE_VERSION
+          echo "TAG_CREATED=true" >> $GITHUB_ENV
+          git push origin main
+          git push origin --tags
+          git push origin develop
+
+      - name: Cleanup tag if workflow fails
+        if: failure() && env.TAG_CREATED == 'true'
+        run: |
+          if [[ -d project ]]; then
+            cd project
+            git tag -d "$RELEASE_VERSION" || true
+            git push origin ":refs/tags/$RELEASE_VERSION" || true
+          else
+            echo "[component-release.yml] WARN: project directory not found, skipping tag cleanup."
+          fi
