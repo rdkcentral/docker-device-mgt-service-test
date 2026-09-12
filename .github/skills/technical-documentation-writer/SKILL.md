@@ -5,6 +5,7 @@ description: Create and maintain comprehensive technical documentation for the d
 
 # Technical Documentation Writer for Docker Certificate Test Harness
 
+
 ## Purpose
 
 Create clear, comprehensive, and maintainable technical documentation for this
