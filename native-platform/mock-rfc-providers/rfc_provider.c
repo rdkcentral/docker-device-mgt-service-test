@@ -33,7 +33,7 @@
 #include <rtMemory.h>
 
 
-#define NUMBER_OF_DATA_ELEMENTS 3
+#define NUMBER_OF_DATA_ELEMENTS 2
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -93,11 +93,6 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
         dataElementNames[0], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
-    },
-    {
-        "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable",
-        RBUS_ELEMENT_TYPE_PROPERTY,
-        RRD_DATA_HANDLER_MACRO
     },
     {
         "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SWDLDirect.Enable",
@@ -271,24 +266,24 @@ rbusError_t rrdDataGetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
 
     const char* name = rbusProperty_GetName(property);
     rbusValue_t value;
-    bool result;
-
     if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable") == 0) {
-        result = rdkRemoteDebuggerIssueType;
+        rbusValue_Init(&value);
+        rbusValue_SetBoolean(value, rdkRemoteDebuggerIssueType);
+        rbusProperty_SetValue(property, value);
+        rbusValue_Release(value);
+        printf("Get handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
+        return RBUS_ERROR_SUCCESS;
     }
     else if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SWDLDirect.Enable") == 0) {
-        result = swdlDirectEnable;
-    }
-    else {
-        return RBUS_ERROR_BUS_ERROR;
+        rbusValue_Init(&value);
+        rbusValue_SetBoolean(value, swdlDirectEnable);
+        rbusProperty_SetValue(property, value);
+        rbusValue_Release(value);
+        printf("Get handler: %s = %s\n", name, swdlDirectEnable ? "true" : "false");
+        return RBUS_ERROR_SUCCESS;
     }
 
-    rbusValue_Init(&value);
-    rbusValue_SetBoolean(value, result);
-    rbusProperty_SetValue(property, value);
-    rbusValue_Release(value);
-    printf("Get handler: %s = %s\n", name, result ? "true" : "false");
-    return RBUS_ERROR_SUCCESS;
+    return RBUS_ERROR_BUS_ERROR;
 }
 
 rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts) {
@@ -297,10 +292,6 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
 
     const char* name = rbusProperty_GetName(property);
     rbusValue_t value = rbusProperty_GetValue(property);
-
-    if (rbusValue_GetType(value) != RBUS_BOOLEAN) {
-        return RBUS_ERROR_INVALID_INPUT;
-    }
 
     if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable") == 0) {
         rdkRemoteDebuggerIssueType = rbusValue_GetBoolean(value);
