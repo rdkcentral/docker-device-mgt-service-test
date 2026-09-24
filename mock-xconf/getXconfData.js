@@ -18,6 +18,7 @@
 */
 
 const https = require('node:https');
+const http = require('node:http');
 const path = require('node:path');
 const fs = require('node:fs');
 const url = require('node:url'); 
@@ -28,6 +29,7 @@ const TLS_CERT = fs.readFileSync(path.join('/etc/xconf/certs/mock-xconf-server-c
 
 const MTLS_PORT = 50052;   // existing secure endpoint (unchanged)
 const DCDN_PORT = 50065;   // new DirectCDN endpoint
+const DCDN_DOWNLOAD_PORT = 50066;
 
 // mTLS-enabled HTTPS options (legacy + secure paths)
 const mtlsOptions = {
@@ -158,7 +160,6 @@ function dcdnRequestHandler(req, res) {
   console.log('[DCDN] Request received:', req.method, req.url);
 
   if (req.method === 'GET') {
-    if (req.url.startsWith('/getfirmwarefile/DCDN/')) return handleFirmwareFileDownload(req, res);
   } else if (req.method === 'POST') {
     if (req.url.startsWith('/firmwareupdate/DCDN/getfirmwaredata')) return handleFirmwareData(req, res, queryObject, 0, 'DCDN_');
     if (req.url.startsWith('/firmwareupdate/DCDN/getinvalidfirmwaredata')) return handleFirmwareData(req, res, queryObject, 1, 'DCDN_');
@@ -174,8 +175,25 @@ function dcdnRequestHandler(req, res) {
   res.end('Not Found');
 }
 
+/**
+ * DirectCDN firmware artifact download endpoint.
+ * This endpoint intentionally uses HTTP without mTLS.
+ */
+function dcdnDownloadRequestHandler(req, res) {
+  console.log('[DCDN-DOWNLOAD] Request received:', req.method, req.url);
+
+  if (req.method === 'GET' &&
+      req.url.startsWith('/getfirmwarefile/DCDN/')) {
+    return handleFirmwareFileDownload(req, res);
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
+}
+
 const mtlsServer = https.createServer(mtlsOptions, secureRequestHandler);
 const dcdnServer = https.createServer(dcdnOptions, dcdnRequestHandler);
+const dcdnDownloadServer = http.createServer(dcdnDownloadRequestHandler);
 
 mtlsServer.listen(MTLS_PORT, () => {
   console.log(`XCONF Mock mTLS server running at https://localhost:${MTLS_PORT}/`);
@@ -183,4 +201,8 @@ mtlsServer.listen(MTLS_PORT, () => {
 
 dcdnServer.listen(DCDN_PORT, () => {
   console.log(`XCONF Mock DirectCDN mTLS server running at https://localhost:${DCDN_PORT}/`);
+});
+
+dcdnDownloadServer.listen(DCDN_DOWNLOAD_PORT, () => {
+  console.log(`XCONF Mock DirectCDN firmware download server running at http://localhost:${DCDN_DOWNLOAD_PORT}/`);
 });
