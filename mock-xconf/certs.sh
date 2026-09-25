@@ -109,43 +109,28 @@ echo "[certs] ✓ xPKI Certifier will use Test-RDK-server-ICA from /etc/pki dire
 if [ "$ENABLE_MTLS" = "true" ]; then
     echo "[certs] mTLS enabled - waiting for client certificates..."
 
-    # Bound the wait so mockxconf can still start and bind 50052 even if the
-    # client side is not ready yet. This avoids a startup deadlock with
-    # native-platform waiting on server_root_ca.pem.
-    MTLS_WAIT_TIMEOUT_SEC="${MTLS_WAIT_TIMEOUT_SEC:-30}"
-    waited=0
-
+    # Wait for client certificate chain
     while [ ! -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; do
-        if [ "$waited" -ge "$MTLS_WAIT_TIMEOUT_SEC" ]; then
-            echo "[certs] WARNING: Timed out after ${MTLS_WAIT_TIMEOUT_SEC}s waiting for client certificates; continuing startup so HTTPS listeners can bind"
-            break
-        fi
         sleep 1
-        waited=$((waited + 1))
-        echo "[certs] Waiting for client certificates... (${waited}/${MTLS_WAIT_TIMEOUT_SEC})"
+        echo "[certs] Waiting for client certificates..."
     done
 
-    if [ -f "$SHARED_CERTS_DIR/client/ca-chain.pem" ]; then
-        echo "[certs] Client certificate chain found - importing to trust store"
+    echo "[certs] Client certificate chain found - importing to trust store"
 
-        # Import client CA chain to trust store and clean it up from shared volume
-        cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
-        rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
-
-        # Operational certs are signed by Test-RDK-server-ICA which has a DIFFERENT root
-        # than the client certificates, so we need the complete server chain
-        if [ -f "$ICA_CERT" ] && [ -f "$ROOT_CA_CERT" ]; then
-            cat "$ICA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
-            cat "$ROOT_CA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
-            echo "[certs] Server CA chain (ICA + root) appended to trust store for operational certificates"
-        fi
-
-        echo "[certs] Client CA chain imported to trust store"
-        echo "[certs] mTLS certificate trust flow established"
-    else
-        echo "[certs] Continuing without client CA chain in trust store for startup"
+    # Import client CA chain to trust store and clean it up from shared volume
+    cp "$SHARED_CERTS_DIR/client/ca-chain.pem" /etc/xconf/trust-store/ca-chain.pem
+    rm -f "$SHARED_CERTS_DIR/client/ca-chain.pem"
+    # Operational certs are signed by Test-RDK-server-ICA which has a DIFFERENT root
+    # than the client certificates, so we need the complete server chain
+    if [ -f "$ICA_CERT" ] && [ -f "$ROOT_CA_CERT" ]; then
+        cat "$ICA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
+        cat "$ROOT_CA_CERT" >> /etc/xconf/trust-store/ca-chain.pem
+        echo "[certs] Server CA chain (ICA + root) appended to trust store for operational certificates"
     fi
+    echo "[certs] Client CA chain imported to trust store"
+    echo "[certs] mTLS certificate trust flow established"
 fi
+
 # ─── CRL mTLS L3 Test PKI ────────────────────────────────────────────────────
 ENABLE_CRL_L3="${ENABLE_CRL_L3:-false}"
 if [ "${ENABLE_CRL_L3}" = "true" ]; then
