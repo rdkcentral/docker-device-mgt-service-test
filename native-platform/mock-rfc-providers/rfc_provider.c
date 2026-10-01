@@ -34,7 +34,7 @@
 
 
 
-#define NUMBER_OF_DATA_ELEMENTS 2
+#define NUMBER_OF_DATA_ELEMENTS 1
 
 #define DATA_HANDLER_MACRO \
     { \
@@ -63,17 +63,16 @@ rbusError_t rrdDataGetHandler(rbusHandle_t handle, rbusProperty_t prop, rbusGetH
 rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbusSetHandlerOptions_t* opts);
 
 // Add a string array to store the data element values
-char dataElementValues[1][256];
+char dataElementValues[NUMBER_OF_DATA_ELEMENTS][256];
 bool rdkRemoteDebuggerIssueType = false;
-bool swdlDirectEnable = false;
 
-char* dataElemenInitValues[1] = {
+char* dataElemenInitValues[NUMBER_OF_DATA_ELEMENTS] = {
     "false"
 };
 
 void init_dataElementValues()
 {
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < NUMBER_OF_DATA_ELEMENTS; i++)
     {
         memset(dataElementValues[i], 0, 256);
         strcpy(dataElementValues[i], dataElemenInitValues[i]);
@@ -81,7 +80,7 @@ void init_dataElementValues()
 }
 
 // Add a string array to store the data element names
- char* const dataElementNames[1] = {
+ char* const dataElementNames[NUMBER_OF_DATA_ELEMENTS] = {
     "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
 };
 
@@ -94,11 +93,6 @@ rbusDataElement_t dataElements[NUMBER_OF_DATA_ELEMENTS] = {
         dataElementNames[0], // The name of the data element
         RBUS_ELEMENT_TYPE_PROPERTY, // The type of the data element
         DATA_HANDLER_MACRO
-    },
-    {
-        "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SWDLDirect.Enable",
-        RBUS_ELEMENT_TYPE_PROPERTY,
-        RRD_DATA_HANDLER_MACRO
     }
 };
 
@@ -121,7 +115,7 @@ void exitHandler(int sig)
 {
     printf("Caught signal %d\n", sig);
 
-    int rc1 = rbus_unregDataElements(handle1, NUMBER_OF_DATA_ELEMENTS, dataElements);
+    int rc1 = rbus_unregDataElements(handle1, 1, dataElements);
     if (rc1 != RBUS_ERROR_INVALID_HANDLE)
     {
         printf("provider: rbus_unregDataElements for handle1 err: %d\n", rc1);
@@ -193,7 +187,7 @@ rbusError_t multiRbusProvider_SampleDataSetHandler(rbusHandle_t handle, rbusProp
     printf("Called set handler for [%s]\n", name);
 
  // For loop to iterate through the data element names and check if the name matches the name of the data element
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < NUMBER_OF_DATA_ELEMENTS; i++)
     {
         printf("dataElementNames[%d] = %s\n", i, dataElementNames[i]);
         if (strcmp(name, dataElementNames[i]) == 0)
@@ -246,7 +240,7 @@ rbusError_t multiRbusProvider_SampleDataGetHandler(rbusHandle_t handle, rbusProp
     name = rbusProperty_GetName(property);
 
     // For loop to iterate through the data element names and check if the name matches the name of the data element
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < NUMBER_OF_DATA_ELEMENTS; i++)
     {
         if (strcmp(name, dataElementNames[i]) == 0)
         {
@@ -275,14 +269,6 @@ rbusError_t rrdDataGetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
         printf("Get handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
         return RBUS_ERROR_SUCCESS;
     }
-    else if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SWDLDirect.Enable") == 0) {
-        rbusValue_Init(&value);
-        rbusValue_SetBoolean(value, swdlDirectEnable);
-        rbusProperty_SetValue(property, value);
-        rbusValue_Release(value);
-        printf("Get handler: %s = %s\n", name, swdlDirectEnable ? "true" : "false");
-        return RBUS_ERROR_SUCCESS;
-    }
 
     return RBUS_ERROR_BUS_ERROR;
 }
@@ -297,11 +283,6 @@ rbusError_t rrdDataSetHandler(rbusHandle_t handle, rbusProperty_t property, rbus
     if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.RDKRemoteDebugger.Enable") == 0) {
         rdkRemoteDebuggerIssueType = rbusValue_GetBoolean(value);
         printf("Set handler: %s = %s\n", name, rdkRemoteDebuggerIssueType ? "true" : "false");
-        return RBUS_ERROR_SUCCESS;
-    }
-    else if (strcmp(name, "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SWDLDirect.Enable") == 0) {
-        swdlDirectEnable = rbusValue_GetBoolean(value);
-        printf("Set handler: %s = %s\n", name, swdlDirectEnable ? "true" : "false");
         return RBUS_ERROR_SUCCESS;
     }
 
