@@ -60,6 +60,7 @@ directory, run:
 ```bash
 python3 docker-device-mgt-service-test/generate_l2_coverage_report.py \
     --component "Remote Debugger" \
+    --report-details remote_debugger/test/functional-tests/l2_coverage_details.json \
     --tracefile /tmp/coverage.info \
     --src-dir remote_debugger/src \
     --features-dir remote_debugger/test/functional-tests/features \
@@ -73,15 +74,39 @@ parent name. Directories are scanned recursively. Features map to tests with
 the same relative directory and stem, adding `test_` when needed. Empty feature
 and test directories are supported.
 
-The report includes line/function coverage, feature/test counts, disabled-test
-estimates, unmatched files, and scenario-to-test count gaps. Only lcov records
+The report retains the full eight-section layout: executive summary, detailed
+feature/test mapping (including excess tests and orphans), source coverage with
+bars, per-behavior detail, gap analysis, recommendations, infrastructure notes,
+and complete feature/test inventories. Only lcov records
 matched to this module's C sources contribute to line totals. Source-relative
 paths distinguish files with identical basenames; ambiguous paths are excluded.
 Merge repeated lcov records with `lcov --add-tracefile` before reporting.
 Function discovery is heuristic and includes conditional C definitions. Test
 counts are not test results, and Scenario Outline examples and parametrized
-cases are not expanded. Behavior assessments and recommendations remain in
-module-owned documentation, not in this shared generator.
+cases are not expanded. Summary totals also include disabled-test estimates.
+
+`--report-details` is optional. It reads a module-owned JSON object containing
+Markdown lines for the hand-written sections, plus display metadata. It does
+not replace measured coverage or test counts. RRD supplies its existing
+assessments through `test/functional-tests/l2_coverage_details.json`; other
+modules can supply their own file or omit the option. Without details, sections
+4, 6 and 7 explicitly state that no module-specific content was supplied.
+
+| JSON field | Type | Purpose |
+|---|---|---|
+| `component_id` | string | Component identifier in the header |
+| `source_label` | string | Source directory display label |
+| `test_suite` | string | Test suite display label |
+| `target_coverage` | string | Functional coverage goal (default `~100%`) |
+| `source_order` | array of strings | Preferred source-relative file order; newly discovered files follow |
+| `behavior_detail` | array of Markdown lines | Section 4 assessments and subsections |
+| `recommendations` | array of Markdown lines | Section 6 prioritized recommendations |
+| `infrastructure_notes` | array of Markdown lines | Section 7 infrastructure tables and notes |
+
+All fields are optional; unknown fields or invalid types fail generation.
+The generator supplies the section headings. Module owners must review the
+hand-written assessments when tests or implementation change; these are not
+inferred from lcov and can become stale.
 
 In GitHub Actions, add a checkout before invoking the same command:
 
@@ -89,8 +114,13 @@ In GitHub Actions, add a checkout before invoking the same command:
 - uses: actions/checkout@v4
     with:
         repository: rdkcentral/docker-device-mgt-service-test
+        ref: feature/l2docupdate
         path: docker-device-mgt-service-test
 ```
+
+The explicit ref matches the RRD PR test while this tooling is on
+`feature/l2docupdate`. Use that branch for local checkouts too; remove or update
+the ref after the tooling is available on the shared repository's default branch.
 
 When running in a container, mount both checkouts in the shared volume and use
 their paths under `/mnt/L2_CONTAINER_SHARED_VOLUME`. No image rebuild is needed.
