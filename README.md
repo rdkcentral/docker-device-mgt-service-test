@@ -114,7 +114,7 @@ In GitHub Actions, add a checkout before invoking the same command:
 - uses: actions/checkout@v4
     with:
         repository: rdkcentral/docker-device-mgt-service-test
-        ref: feature/l2docupdate
+        ref: main
         path: docker-device-mgt-service-test
 ```
 
