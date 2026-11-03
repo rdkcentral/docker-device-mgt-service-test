@@ -119,7 +119,7 @@ In GitHub Actions, add a checkout before invoking the same command:
 ```
 
 The explicit ref matches the RRD PR test while this tooling is on
-`feature/l2docupdate`. Use that branch for local checkouts too; remove or update
+`main`. Use that branch for local checkouts too; remove or update
 the ref after the tooling is available on the shared repository's default branch.
 
 When running in a container, mount both checkouts in the shared volume and use
