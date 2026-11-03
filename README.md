@@ -46,6 +46,61 @@ From within same location where compose.yaml is available, run the following com
 docker-compose up
 ```
 
+## Shared L2 coverage report
+
+The repository-root `generate_l2_coverage_report.py` generates a Markdown report
+for any module with C sources, Gherkin feature files, Python `test_*.py` files,
+and an lcov tracefile. It requires Python 3.8 or newer and only the standard
+library; Docker and lcov are not needed to generate the report from an existing
+tracefile.
+
+Check out this repository alongside the module repository. From their parent
+directory, run:
+
+```bash
+python3 docker-device-mgt-service-test/generate_l2_coverage_report.py \
+    --component "Remote Debugger" \
+    --tracefile /tmp/coverage.info \
+    --src-dir remote_debugger/src \
+    --features-dir remote_debugger/test/functional-tests/features \
+    --tests-dir remote_debugger/test/functional-tests/tests \
+    --output remote_debugger/test/functional-tests/L2_Coverage.md
+```
+
+For other modules, change the component name and input/output paths. All five
+path arguments are required; `--component` defaults to the source directory's
+parent name. Directories are scanned recursively. Features map to tests with
+the same relative directory and stem, adding `test_` when needed. Empty feature
+and test directories are supported.
+
+The report includes line/function coverage, feature/test counts, disabled-test
+estimates, unmatched files, and scenario-to-test count gaps. Only lcov records
+matched to this module's C sources contribute to line totals. Source-relative
+paths distinguish files with identical basenames; ambiguous paths are excluded.
+Merge repeated lcov records with `lcov --add-tracefile` before reporting.
+Function discovery is heuristic and includes conditional C definitions. Test
+counts are not test results, and Scenario Outline examples and parametrized
+cases are not expanded. Behavior assessments and recommendations remain in
+module-owned documentation, not in this shared generator.
+
+In GitHub Actions, add a checkout before invoking the same command:
+
+```yaml
+- uses: actions/checkout@v4
+    with:
+        repository: rdkcentral/docker-device-mgt-service-test
+        path: docker-device-mgt-service-test
+```
+
+When running in a container, mount both checkouts in the shared volume and use
+their paths under `/mnt/L2_CONTAINER_SHARED_VOLUME`. No image rebuild is needed.
+
+Run the reporter's focused tests from this repository's root:
+
+```bash
+python3 -m pytest -q test_generate_l2_coverage_report.py
+```
+
 ## Logging inside individual application container
 ### Native Platform container
 ```
