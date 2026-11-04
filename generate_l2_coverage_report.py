@@ -74,7 +74,8 @@ def parse_tracefile(path, src_dir, source_names):
             line = raw.rstrip()
             if line.startswith('SF:'):
                 name = _source_name(line[3:], src_dir, source_names)
-                current = {'name': name, 'lh': 0, 'lf': 0, 'hit': set()}
+                current = {'name': name, 'lh': 0, 'lf': 0, 'hit': set(),
+                           'fnh': None, 'fnf': None}
             elif line == 'end_of_record' and current is not None:
                 name = current['name']
                 if name is not None:
@@ -87,6 +88,10 @@ def parse_tracefile(path, src_dir, source_names):
                     current['lh'] = int(line[3:])
                 elif line.startswith('LF:'):
                     current['lf'] = int(line[3:])
+                elif line.startswith('FNH:'):
+                    current['fnh'] = int(line[4:])
+                elif line.startswith('FNF:'):
+                    current['fnf'] = int(line[4:])                    
                 elif line.startswith('FNDA:'):
                     count, _, name = line[5:].partition(',')
                     if int(count) > 0:
@@ -171,6 +176,12 @@ def generate(component, src_dir, features_dir, tests_dir, sources, files,
                         for name, names in sources.items())
     lines_hit = sum(data['lh'] for data in files.values())
     lines_found = sum(data['lf'] for data in files.values())
+    compiled_coverage = 'N/A (FNH/FNF unavailable)'
+    if files and all(data.get('fnh') is not None and data.get('fnf') is not None
+                     for data in files.values()):
+        compiled_hit = sum(data['fnh'] for data in files.values())
+        compiled_found = sum(data['fnf'] for data in files.values())
+        compiled_coverage = f'{_pct(compiled_hit, compiled_found)} ({compiled_hit}/{compiled_found} functions)'                 
     mapped = sum(test is not None for _, _, test, _ in pairs)
     source_label = details.get('source_label', Path(src_dir).as_posix()).rstrip('/\\')
     source_pattern = source_label + ('/**/*.c' if any('/' in name for name in sources) else '/*.c')
@@ -188,9 +199,12 @@ def generate(component, src_dir, features_dir, tests_dir, sources, files,
         f'| Functions hit | {functions_hit} |',
         f'| Functions not hit | {functions_found - functions_hit} |',
         f'| Current functional coverage | {_pct(functions_hit, functions_found)} |',
+        f'| Compiled-function coverage (lcov) | {compiled_coverage} |',        
         f'| Target L2 functional coverage | {details.get("target_coverage", "~100%")} |', '',
         '> Function coverage = functions called at least once during the L2 run (lcov `FNDA` > 0),',
         f'> divided by all function definitions in `{source_pattern}`, including those compiled out by `#if`.', '',
+        '> Compiled-function coverage (lcov) = sum of FNH / sum of FNF for matched module files.',
+        '> This measures compiled functions recorded by lcov, excluding compiled-out definitions.', '',        
         '**L2 Test Summary**', '',
         '| Metric | Value |', '|---|:---:|',
         f'| Feature files | {len(features)} |',

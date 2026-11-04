@@ -85,6 +85,21 @@ Function discovery is heuristic and includes conditional C definitions. Test
 counts are not test results, and Scenario Outline examples and parametrized
 cases are not expanded. Summary totals also include disabled-test estimates.
 
+The **L2 Test Coverage** summary reports two distinct function metrics:
+
+- **Current functional coverage:** functions called according to lcov `FNDA`,
+    divided by all scanned C function definitions, including compiled-out code.
+- **Compiled-function coverage (lcov):** `100 * sum(FNH) / sum(FNF)`, where
+    `FNH` is functions hit and `FNF` is functions found in the matched module's
+    trace records. Counts are summed before dividing; file percentages are not
+    averaged. This metric excludes compiled-out definitions and is comparable
+    to lcov/genhtml function coverage for the same filtered source files.
+
+The compiled-function metric displays both the percentage and hit/found totals.
+It shows `N/A` if no functions were found or any matched record lacks `FNH` or
+`FNF`; it does not substitute heuristic source counts or silently omit records.
+The existing lcov capture and report-generation command require no changes.
+
 `--report-details` is optional. It reads a module-owned JSON object containing
 Markdown lines for the hand-written sections, plus display metadata. It does
 not replace measured coverage or test counts. RRD supplies its existing
