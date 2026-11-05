@@ -241,6 +241,7 @@ RUN chmod +x /usr/local/bin/certs.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 
+COPY generate_l2_coverage_report.py /etc/generate_l2_coverage_report.py
 # Set the entry point command
 #CMD ["/bin/bash"]
 
