@@ -104,6 +104,16 @@ jobs:
           tags: localhost:5000/native-platform:latest
           load: false
 
+      - name: Verify native-platform arm64 build (no push)
+        uses: docker/build-push-action@v4
+        with:
+          context: device-management-service/native-platform
+          platforms: linux/arm64
+          build-args: |
+            - REVISION=${{ github.ref_name }}
+          push: false
+          tags: native-platform:arm64-verify
+
       - name: Prepare expected directory for mount in docker-compose
         run: |
           mkdir -p /tmp/L2_CONTAINER_SHARED_VOLUME
