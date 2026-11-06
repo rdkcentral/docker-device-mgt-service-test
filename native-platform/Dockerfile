@@ -129,6 +129,20 @@ RUN rm -rf /opt/containers
 RUN apt-get update && apt-get install -y libdirectfb-dev libyajl-dev libtinyxml2-dev libdbus-1-dev libdbus-glib-1-dev procps libprocps-dev 
 
 COPY tr69hostif /opt/tr69hostif
+# Patch tr69hostif for multi-arch support
+# Fix hardcoded x86_64-linux-gnu paths to use architecture-neutral paths
+# Add set -e to cov_build.sh to propagate build failures
+RUN cd /opt/tr69hostif && \
+    sed -i '1i set -e' cov_build.sh && \
+    # Replace hardcoded x86_64-linux-gnu paths in cov_build.sh with multiarch paths
+    sed -i 's|/usr/lib/x86_64-linux-gnu/glib-2.0/include|$(pkg-config --variable=includedir glib-2.0)/glib-2.0/include|g' cov_build.sh && \
+    sed -i 's|-L/usr/lib/x86_64-linux-gnu|-L/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)|g' cov_build.sh && \
+    sed -i 's|-L/usr/local/lib/x86_64-linux-gnu|-L/usr/local/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)|g' cov_build.sh && \
+    # Replace hardcoded x86_64-linux-gnu paths in Makefile.am files with the correct multiarch path
+    MULTIARCH_LIBDIR=$(dpkg-architecture -qDEB_HOST_MULTIARCH) && \
+    find src -name "Makefile.am" -exec sed -i "s|/usr/lib/x86_64-linux-gnu/glib-2.0/include|/usr/lib/${MULTIARCH_LIBDIR}/glib-2.0/include|g" {} \; && \
+    find src -name "Makefile.am" -exec sed -i "s|-L/usr/lib/x86_64-linux-gnu|-L/usr/lib/${MULTIARCH_LIBDIR}|g" {} \; && \
+    find src -name "Makefile.am" -exec sed -i "s|-L/usr/local/lib/x86_64-linux-gnu|-L/usr/local/lib/${MULTIARCH_LIBDIR}|g" {} \;
 RUN cd /opt/tr69hostif && sh cov_build.sh
 RUN rm -rf /opt/tr69hostif
 
