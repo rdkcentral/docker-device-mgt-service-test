@@ -5,6 +5,8 @@ This container is intended to be used for faster development and integration tes
 It includes a pre-built version of the application and all the dependencies required to run the application.
 All tools required to build the application are also included in the container.
 
+The Docker images are multi-arch (linux/amd64 and linux/arm64). On Apple Silicon Macs, the arm64 variant runs natively without emulation.
+
 A container that mocks the required XCONF services is also included as a separate container within the same docker network.
 The mock XCONF services are used to simulate the XCONF services that are required by the application.
 Service will be available at `http://mockxconf:50050` .
