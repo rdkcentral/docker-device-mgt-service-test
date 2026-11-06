@@ -135,7 +135,7 @@ COPY tr69hostif /opt/tr69hostif
 RUN cd /opt/tr69hostif && \
     sed -i '1i set -e' cov_build.sh && \
     # Replace hardcoded x86_64-linux-gnu paths in cov_build.sh with multiarch paths
-    sed -i 's|/usr/lib/x86_64-linux-gnu/glib-2.0/include|$(pkg-config --variable=includedir glib-2.0)/glib-2.0/include|g' cov_build.sh && \
+    sed -i 's|/usr/lib/x86_64-linux-gnu/glib-2.0/include|$(pkg-config --variable=libdir glib-2.0)/glib-2.0/include|g' cov_build.sh && \
     sed -i 's|-L/usr/lib/x86_64-linux-gnu|-L/usr/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)|g' cov_build.sh && \
     sed -i 's|-L/usr/local/lib/x86_64-linux-gnu|-L/usr/local/lib/$(dpkg-architecture -qDEB_HOST_MULTIARCH)|g' cov_build.sh && \
     # Replace hardcoded x86_64-linux-gnu paths in Makefile.am files with the correct multiarch path
