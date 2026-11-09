@@ -5,7 +5,10 @@ import argparse
 import datetime
 import json
 from pathlib import Path
+from pathlib import PurePosixPath
 import re
+
+CPP_SOURCE_SUFFIXES = {'.cc', '.cpp', '.cxx', '.c++', '.C'}
 
 
 def _pct(hit, found):
@@ -43,11 +46,16 @@ def _c_function_names(path):
     return names
 
 
-def scan_source_functions(src_dir):
+def scan_source_functions(src_dir, source_includes=None):
     root = Path(src_dir)
     return {
-        path.relative_to(root).as_posix(): _c_function_names(path)
-        for path in sorted(root.rglob('*.c')) if path.is_file()
+        path.relative_to(root).as_posix():
+            _c_function_names(path) if path.suffix == '.c' else set()
+        for path in sorted(root.rglob('*'))
+        if path.is_file() and (path.suffix == '.c' or path.suffix in CPP_SOURCE_SUFFIXES)
+        and (not source_includes or any(
+            PurePosixPath(path.relative_to(root).as_posix()).match(pattern)
+            for pattern in source_includes))
     }
 
 
@@ -74,7 +82,8 @@ def parse_tracefile(path, src_dir, source_names):
             line = raw.rstrip()
             if line.startswith('SF:'):
                 name = _source_name(line[3:], src_dir, source_names)
-                current = {'name': name, 'lh': 0, 'lf': 0, 'hit': set()}
+                current = {'name': name, 'lh': 0, 'lf': 0,
+                           'functions': set(), 'hit': set()}
             elif line == 'end_of_record' and current is not None:
                 name = current['name']
                 if name is not None:
@@ -87,6 +96,10 @@ def parse_tracefile(path, src_dir, source_names):
                     current['lh'] = int(line[3:])
                 elif line.startswith('LF:'):
                     current['lf'] = int(line[3:])
+                elif line.startswith('FN:'):
+                    _, _, name = line[3:].partition(',')
+                    if name:
+                        current['functions'].add(name)
                 elif line.startswith('FNDA:'):
                     count, _, name = line[5:].partition(',')
                     if int(count) > 0:
@@ -166,14 +179,21 @@ def generate(component, src_dir, features_dir, tests_dir, sources, files,
     orphan_features = [(feature, scenarios) for feature, scenarios, test, _ in pairs
                        if test is None]
     mapped_pairs = [pair for pair in pairs if pair[2] is not None]
-    functions_found = sum(len(names) for names in sources.values())
+    function_inventory = {
+        name: (files.get(name, {}).get('functions', set())
+               if Path(name).suffix in CPP_SOURCE_SUFFIXES else names)
+        for name, names in sources.items()
+    }
+    functions_found = sum(len(names) for names in function_inventory.values())
     functions_hit = sum(len(names & files.get(name, {}).get('hit', set()))
-                        for name, names in sources.items())
+                        for name, names in function_inventory.items())
     lines_hit = sum(data['lh'] for data in files.values())
     lines_found = sum(data['lf'] for data in files.values())
     mapped = sum(test is not None for _, _, test, _ in pairs)
     source_label = details.get('source_label', Path(src_dir).as_posix()).rstrip('/\\')
-    source_pattern = source_label + ('/**/*.c' if any('/' in name for name in sources) else '/*.c')
+    source_suffixes = ','.join(sorted({Path(name).suffix for name in sources})) or '.c'
+    source_pattern = source_label + ('/**/*{' if any('/' in name for name in sources) else '/*{')
+    source_pattern += source_suffixes + '}'
     lines = [
         f'# {component} L2 Coverage Report', '',
         f'**Generated:** {datetime.date.today().isoformat()}  ',
@@ -200,7 +220,7 @@ def generate(component, src_dir, features_dir, tests_dir, sources, files,
         f'| Mapped feature/test pairs | {mapped} / {len(features)} |',
         f'| Unmatched test files | {len(orphan_tests)} |',
         f'| Line coverage (lcov) | {_pct(lines_hit, lines_found)} ({lines_hit} of {lines_found} lines) |', '',
-        '> Function definitions are discovered with a heuristic C source scan.',
+        '> C function definitions use a source scan; C++ function definitions use LCOV FN records.',
         f'> Disabled test functions (skip markers or commented definitions): {disabled_functions};',
         f'> files with no enabled test functions: {disabled_files}.',
         '> Test counts include skipped definitions and are not pass/fail results. Skip counts are',
@@ -239,7 +259,7 @@ def generate(component, src_dir, features_dir, tests_dir, sources, files,
     for name in source_order:
         if name not in sources:
             continue
-        functions = sources[name]
+        functions = function_inventory[name]
         data = files.get(name)
         if data is None:
             lines.append(f'| `{name}` | \u2014 | \u2014 | no data |')
@@ -289,6 +309,8 @@ def main():
     parser.add_argument('--features-dir', required=True, type=Path)
     parser.add_argument('--tests-dir', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--source-include', action='append',
+                        help='Root-relative source glob to include; may be repeated')
     parser.add_argument('--component', help='Report name (default: parent of the source directory)')
     parser.add_argument('--report-details', type=Path,
                         help='Module-owned JSON metadata and Markdown lines for sections 4, 6 and 7')
@@ -298,7 +320,7 @@ def main():
             parser.error(f'Not a directory: {getattr(args, name)}')
     try:
         details = load_report_details(args.report_details) if args.report_details else None
-        sources = scan_source_functions(args.src_dir)
+        sources = scan_source_functions(args.src_dir, args.source_include)
         files = parse_tracefile(args.tracefile, args.src_dir, sources)
         features = scan_features(args.features_dir)
         tests, disabled_functions, disabled_files = scan_tests(args.tests_dir)
