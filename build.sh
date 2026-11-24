@@ -39,6 +39,7 @@ git clone https://github.com/rdkcentral/WebconfigFramework.git
 git clone https://github.com/rdkcentral/libSyscallWrapper.git
 git clone https://github.com/rdkcentral/common_utilities.git
 git clone https://github.com/rdkcentral/tr69hostif.git
+git clone https://github.com/rdk-common/rdk-distributed-tracer.git
 
 docker build -t ${REGISTRY_ROOT}/${REPOSITORY_NAME}/native-platform:latest -f Dockerfile .
 
@@ -47,6 +48,7 @@ rm -rf WebconfigFramework
 rm -rf libSyscallWrapper
 rm -rf common_utilities
 rm -rf tr69hostif
+rm -rf rdk-distributed-tracer
 cd -
 
 

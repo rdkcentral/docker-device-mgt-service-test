@@ -57,7 +57,8 @@ RUN apt-get update && apt-get install -y cmake
 RUN cd /usr/src/googletest/googlemock/ && mkdir build && cmake .. && make && make install
 
 RUN apt-get update && apt-get install -y \
-    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev
+    liblog4c-dev libarchive-dev libtool-bin libgpgme-dev libsoup2.4-dev \
+    pkg-config libyaml-dev libjson-c-dev libmicrohttpd-dev nlohmann-json3-dev
 
 RUN git config --global http.sslverify false
 
@@ -158,6 +159,10 @@ RUN mkdir -p /var/lib/softhsm/tokens && \
 # Environment variable for PKCS#11
 ENV SOFTHSM2_CONF=/etc/softhsm2.conf
 
+COPY rdk-distributed-tracer /opt/rdk-distributed-tracer
+RUN bash /opt/rdk-distributed-tracer/build-and-start-tracer.sh dependency_build && \
+    rm -rf /opt/rdk-distributed-tracer /tmp/collector-build /tmp/instrumentation-build
+
 # Trim down the docker image size
 RUN apt-get remove -y software-properties-common
 RUN apt-get autoremove -y
@@ -240,60 +245,6 @@ COPY certs.sh /usr/local/bin/certs.sh
 RUN chmod +x /usr/local/bin/certs.sh
 RUN echo 'export PATH=$PATH:/usr/local/bin' >> ~/.bashrc
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
-
-# Additional dependencies for the distributed tracer L1 build and coverage runner.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config ca-certificates libyaml-dev libjson-c-dev libmicrohttpd-dev nlohmann-json3-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-ARG OTEL_CPP_VERSION=v1.23.0
-ARG L1_BUILD_JOBS=2
-
-# Keep SDK installation after the existing library builds to preserve their build environment.
-RUN set -eu; \
-    SDK_INSTALL_PREFIX=/usr/local; \
-    SDK_BUILD_ROOT="$(mktemp -d /tmp/rdk-l1-deps.XXXXXX)"; \
-    trap 'rm -rf -- "${SDK_BUILD_ROOT}"' EXIT; \
-    git clone --depth 1 --branch "${OTEL_CPP_VERSION}" \
-        https://github.com/open-telemetry/opentelemetry-cpp.git \
-        "${SDK_BUILD_ROOT}/opentelemetry-cpp"; \
-    ABSEIL_TAG="$(sed -n 's/^abseil=//p' "${SDK_BUILD_ROOT}/opentelemetry-cpp/third_party_release" | tr -d '\r')"; \
-    PROTOBUF_TAG="$(sed -n 's/^protobuf=//p' "${SDK_BUILD_ROOT}/opentelemetry-cpp/third_party_release" | tr -d '\r')"; \
-    test -n "${ABSEIL_TAG}"; \
-    test -n "${PROTOBUF_TAG}"; \
-    git clone --depth 1 --branch "${ABSEIL_TAG}" \
-        https://github.com/abseil/abseil-cpp.git "${SDK_BUILD_ROOT}/abseil-cpp"; \
-    cmake -S "${SDK_BUILD_ROOT}/abseil-cpp" -B "${SDK_BUILD_ROOT}/abseil-build" \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${SDK_INSTALL_PREFIX}" \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DABSL_ENABLE_INSTALL=ON; \
-    cmake --build "${SDK_BUILD_ROOT}/abseil-build" -j"${L1_BUILD_JOBS}"; \
-    cmake --install "${SDK_BUILD_ROOT}/abseil-build"; \
-    git clone --depth 1 --branch "${PROTOBUF_TAG}" \
-        https://github.com/protocolbuffers/protobuf.git "${SDK_BUILD_ROOT}/protobuf"; \
-    PROTOBUF_SOURCE="${SDK_BUILD_ROOT}/protobuf"; \
-    if [ ! -f "${PROTOBUF_SOURCE}/CMakeLists.txt" ]; then \
-        PROTOBUF_SOURCE="${PROTOBUF_SOURCE}/cmake"; \
-    fi; \
-    cmake -S "${PROTOBUF_SOURCE}" -B "${SDK_BUILD_ROOT}/protobuf-build" \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${SDK_INSTALL_PREFIX}" \
-        -DCMAKE_PREFIX_PATH="${SDK_INSTALL_PREFIX}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_ABSL_PROVIDER=package; \
-    cmake --build "${SDK_BUILD_ROOT}/protobuf-build" -j"${L1_BUILD_JOBS}"; \
-    cmake --install "${SDK_BUILD_ROOT}/protobuf-build"; \
-    ldconfig; \
-    cmake -S "${SDK_BUILD_ROOT}/opentelemetry-cpp" -B "${SDK_BUILD_ROOT}/otel-build" \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="${SDK_INSTALL_PREFIX}" \
-        -DCMAKE_PREFIX_PATH="${SDK_INSTALL_PREFIX}" -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DBUILD_SHARED_LIBS=ON -DWITH_OTLP_HTTP=ON -DWITH_OTLP_GRPC=OFF \
-        -DWITH_ABSEIL=ON -DWITH_PROMETHEUS=OFF -DWITH_ZIPKIN=OFF \
-        -DWITH_ELASTICSEARCH=OFF -DWITH_EXAMPLES=OFF -DBUILD_TESTING=OFF \
-        -DProtobuf_DIR="${SDK_INSTALL_PREFIX}/lib/cmake/protobuf" \
-        -Dabsl_DIR="${SDK_INSTALL_PREFIX}/lib/cmake/absl"; \
-    cmake --build "${SDK_BUILD_ROOT}/otel-build" -j"${L1_BUILD_JOBS}"; \
-    cmake --install "${SDK_BUILD_ROOT}/otel-build"; \
-    ldconfig; \
-    test -f "${SDK_INSTALL_PREFIX}/include/opentelemetry/trace/provider.h"; \
-    test -f "${SDK_INSTALL_PREFIX}/include/opentelemetry/proto/collector/trace/v1/trace_service.pb.h"
 
 # Set the entry point command
 #CMD ["/bin/bash"]
